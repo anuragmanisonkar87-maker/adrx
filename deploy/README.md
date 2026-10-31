@@ -14,7 +14,7 @@ poster, voice note or video. On either option below:
 | Cost | Free, no card | About ₹500-1,000 a month |
 | Address | `https://adrx.onrender.com` | `https://your-name.duckdns.org` or your domain |
 | Speed | Text in a second, posters in about 15 s, a 30-second video in a minute or two | Several times faster |
-| When idle | Sleeps after 15 minutes; the next visit takes about a minute to wake it | Always on |
+| When idle | Kept awake by a GitHub schedule (see below); without it, sleeps after 15 minutes | Always on |
 | Files | Up to 30 MB; first 2 minutes of audio/video | Up to 100 MB; first 3 minutes |
 | Speech-to-text | Groq's free API (needs a free key) | On the server itself |
 
@@ -35,6 +35,13 @@ project.
 
 Every change pushed to the repository redeploys the site automatically. On Render, audio is sent to Groq to be
 turned into text, and the page says so in its privacy note.
+
+**Keeping it awake.** The GitHub workflow `.github/workflows/keep-awake.yml` opens the site every 5 minutes, so
+it doesn't fall asleep. Awake all the time, one site uses about 744 of Render's 750 free hours a month, so
+don't add a second free service to the same Render account. If Render gave the site a different address than
+`https://adrx.onrender.com`, add a repository variable `SITE_URL` with the real address (GitHub: Settings >
+Secrets and variables > Actions > Variables). GitHub pauses scheduled workflows in a repository that has had
+no changes for 60 days; the Actions tab then offers a button to turn it back on.
 
 ## Option B: your own server
 

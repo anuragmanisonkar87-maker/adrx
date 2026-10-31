@@ -178,6 +178,16 @@ def test_privacy_note_names_the_outside_speech_service(monkeypatch, public):
     assert client.get("/api/health").json()["speech_service"] is None
 
 
+def test_keep_awake_workflow_visits_the_site_quietly():
+    workflow = yaml.safe_load((ROOT / ".github" / "workflows" / "keep-awake.yml").read_text())
+    schedule = workflow[True]["schedule"][0]["cron"]  # YAML reads the key "on" as True
+    assert schedule == "*/5 * * * *"  # well inside Render's 15 idle minutes, even when GitHub starts late
+    step = workflow["jobs"]["visit"]["steps"][0]
+    assert "/api/health" in step["run"]  # the health page doesn't count toward visitor limits
+    assert "exit 1" not in step["run"]  # a sleeping or missing site gives a warning, not failure emails
+    assert "onrender.com" in step["env"]["SITE_URL"] and "vars.SITE_URL" in step["env"]["SITE_URL"]
+
+
 def test_visitors_get_a_plain_message_when_speech_is_not_set_up(monkeypatch, public, samples):
     pytest.importorskip("numpy")
     from tests.conftest import has_ffmpeg
