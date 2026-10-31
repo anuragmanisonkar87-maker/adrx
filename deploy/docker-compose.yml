@@ -1,0 +1,43 @@
+# AdRx website: the app, and Caddy in front of it for HTTPS. Settings are in deploy/.env (see .env.example).
+name: adrx
+
+services:
+  app:
+    build:
+      context: ..
+      args:
+        PRELOAD_WHISPER: "1"
+        WHISPER_MODEL: ${WHISPER_MODEL:-small}
+    env_file: .env
+    environment:
+      FORWARDED_ALLOW_IPS: "*"  # Caddy passes on each visitor's IP address, used for the visitor limits
+    expose:
+      - "8000"
+    restart: unless-stopped
+    logging: &logs
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  caddy:
+    image: caddy:2
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:-:80}
+      PROXY_MAX_BODY: ${PROXY_MAX_BODY:-110MB}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    restart: unless-stopped
+    logging: *logs
+
+volumes:
+  caddy_data:
+  caddy_config:

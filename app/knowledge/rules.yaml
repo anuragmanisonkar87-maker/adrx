@@ -1,0 +1,558 @@
+# Deterministic red-flag rules derived from the NMC Guidelines on Ethical Advertising (06-10-2026).
+#
+# Each rule maps phrases to guideline clauses. The rule engine highlights every match; the AI reviewer
+# (when an API key is configured) then confirms or dismisses each match and adds anything the rules missed.
+#
+# Pattern notes
+# - Python regular expressions, matched case-insensitively on NFC-normalised text.
+# - Devanagari patterns do not use \b (Python treats Devanagari vowel signs as non-word characters).
+# - exclude_before: regex tested against the ~40 characters before a match (anchor it with $).
+# - exclude_after:  regex tested against the ~40 characters after a match (anchor it with ^).
+# - negation: true skips matches preceded by "no/not/never/cannot..." or followed by "नहीं"
+#   (so "results are not guaranteed" is not flagged).
+#
+# Severity: high = clearly prohibited; medium = likely problematic / needs verification;
+#           low = advisory. serious: true marks the "serious violation" class in clause 10.1(iv).
+
+guideline: "NMC Public Notice No. R-13014/01/2024-Ethics dated 06-10-2026"
+
+rules:
+  - id: guaranteed_outcome
+    title: Guarantee of cure or result
+    severity: high
+    serious: true
+    clauses: ["8.1(iii)", "8.1(vi)", "8.3(ii)", "3.2 Expl. II"]
+    negation: true
+    why: >-
+      The guidelines prohibit guarantees of cure or outcome ("Guaranteed cures", "100% success")
+      and any claim that creates unrealistic expectations. Misleading cure claims are treated as a
+      serious violation.
+    fix: >-
+      Remove the guarantee. Describe the treatment factually, e.g. "Treatment for [condition] is
+      available. Results vary from person to person; please consult the doctor."
+    patterns:
+      - '\bguarant(?:ee|eed|ees|y)\b'
+      - '\bassured\s+(?:results?|cure|recovery|success|outcomes?|relief)\b'
+      - '\b100\s?%\s*(?:cure[ds]?|success(?:ful)?|results?|guarantee[d]?|recovery|relief|satisfaction|accura(?:te|cy)|effective|permanent|natural\s+cure)\b'
+      - '\b(?:permanent|complete|total|lifetime|life-?long)\s+(?:cure|relief|solution|results?)\b'
+      - '\bcures?\s+(?:it\s+)?(?:permanently|forever|for\s+life|completely|from\s+the\s+root)\b'
+      - '\bcured?\s+(?:in|within)\s+(?:just\s+)?\d+\s*(?:days?|weeks?|months?|sessions?)\b'
+      - '\bnever\s+comes?\s+back\b'
+      - '\bmoney[- ]back\b'
+      - '\b(?:sure[- ]?shot|definite)\s+(?:cure|results?|success|relief)\b'
+      - '\bget\s+rid\s+of\s+(?:\w+\s+){1,3}(?:forever|permanently|for\s+life)\b'
+      - 'गारंटी'
+      - 'गारन्टी'
+      - 'ग्यारंटी'
+      - 'शर्तिया'
+      - '100\s?%\s*(?:इलाज|ठीक|सफल|सफलता|परिणाम|रिजल्ट|रिज़ल्ट|असरदार)'
+      - 'पक्का\s+इलाज'
+      - 'जड़\s*से\s+(?:खत्म|ख़त्म|इलाज|मिटा|ठीक|छुटकारा)'
+      - 'हमेशा\s+के\s+लिए\s+(?:छुटकारा|ठीक|खत्म|ख़त्म|इलाज|आराम)'
+      - '(?:स्थायी|परमानेंट|पर्मानेंट|परमानेन्ट)\s+(?:इलाज|समाधान|सॉल्यूशन|ilaa?j|cure|solution)'
+      - '\bpermanent\s+(?:इलाज|समाधान)'
+      - '(?:100\s?%|(?:सौ|सो)\s+(?:प्रतिशत|परसेंट|फीसदी))\s*(?:रिज़ल्ट|रिजल्ट|परिणाम|इलाज|गारंटी|ग्यारंटी|सफल|सफलता|ठीक|असरदार|results?|guarantee[d]?)'
+      - '\bpakka\s+ilaa?j\b'
+      - '\bjad\s+se\s+(?:khatam|khatm|ilaa?j|theek|thik|mitaye?)\b'
+      - '\bhamesha\s+ke\s+liye\s+(?:chhutkara|chutkara|theek|thik|khatam)\b'
+      - '\bshartiya\b'
+
+  - id: disease_cure_claim
+    title: Claim to cure a chronic or serious disease
+    severity: high
+    serious: true
+    clauses: ["8.1(vi)", "8.1(iii)"]
+    negation: true
+    why: >-
+      Claiming to cure or reverse chronic or serious diseases misrepresents treatment outcomes and
+      promotes therapies whose efficacy is not established. This is a misleading cure claim.
+    fix: >-
+      Say what care is offered without promising a cure, e.g. "Diabetes care and management
+      services are available. Please consult the doctor for a personalised treatment plan."
+    patterns:
+      - '\b(?:cures?|cured|curing|reverses?|reversing|reversal\s+of|eliminates?|eradicates?|ends?)\s+(?:your\s+)?(?:type\s*[12]\s+)?(?:diabetes|cancer|aids|hiv|autism|thyroid|hypothyroidism|arthritis|psoriasis|vitiligo|infertility|asthma|baldness|obesity|pcod|pcos|kidney\s+(?:failure|disease)|heart\s+(?:blockages?|disease)|piles|migraine|epilepsy|parkinson[''`]?s|alzheimer[''`]?s|hypertension|blood\s+pressure|sugar)\b'
+      - '\bcure\s+(?:for|of)\s+(?:type\s*[12]\s+)?(?:diabetes|cancer|aids|hiv|autism|thyroid|arthritis|psoriasis|vitiligo|infertility|asthma|baldness|obesity|pcod|pcos|kidney\s+(?:failure|disease)|heart\s+(?:blockages?|disease)|piles|migraine|epilepsy|hypertension|sugar)\b'
+      - '(?:मधुमेह|डायबिटीज़?|शुगर|कैंसर|थायराइड|गठिया|बवासीर|पाइल्स|अस्थमा|दमा|सोरायसिस|बांझपन|मोटापा)\s+(?:का|से)\s+(?:पक्का\s+|स्थायी\s+|जड़\s*से\s+)?(?:इलाज|छुटकारा|मुक्ति)'
+      - '\b(?:diabetes|sugar|thyroid|cancer|piles|bawaseer)\s+(?:ka|se)\s+(?:pakka\s+)?(?:ilaa?j|chhutkara|chutkara|mukti)\b'
+
+  - id: superiority_claim
+    title: Superiority or comparative claim (best, No.1, top, leading...)
+    severity: high
+    clauses: ["8.1(ix)", "8.1(iii)", "8.3(ii)"]
+    why: >-
+      Words like "best", "No.1", "top", "leading", "most trusted" or "unmatched" are prohibited
+      unless the claim is objectively verifiable through a transparent, independent methodology.
+    fix: >-
+      Drop the superlative and describe the service plainly, e.g. "[Specialty] services at
+      [Clinic name]". Keep a ranking only if it is independently verifiable and you disclose the
+      source, methodology and date.
+    patterns:
+      - '\bbest\b'
+      - '(?<![\w])no\s?\.?\s?1\b'
+      - '#\s?1\b'
+      - '\bnumber\s+(?:one|1)\b'
+      - '\btop[- ]?(?:rated|ranked|notch|class|most|doctors?|surgeons?|specialists?|hospitals?|clinics?|centres?|centers?|cardiologists?|dermatologists?|dentists?|gyn(?:a)?ecologists?|orthop(?:a)?edic(?:s|ians?)?|physicians?|experts?|\d+)\b'
+      - '\b(?:among|one\s+of)\s+the\s+top\b'
+      - '\bleading\b'
+      - '\bmost\s+(?:trusted|experienced|advanced|reputed|renowned|preferred|popular|reliable|recommended|successful|famous|qualified|skilled|affordable|modern|sought[- ]after|loved)\b'
+      - '\b(?:unmatched|unbeatable|unparalleled|unrivall?ed|world[- ]class|world[- ]famous|finest|superior)\b'
+      - '\bsecond\s+to\s+none\b'
+      - '\b(?:india|mumbai|delhi|pune|bangalore|bengaluru|chennai|hyderabad|kolkata|city|state|asia|world|country|town)[''`]?s?\s+(?:best|first|largest|biggest|only|no\.?\s?1|number\s+one|top|leading|most\s+\w+)\b'
+      - '\b(?:the\s+)?only\s+(?:hospital|clinic|centre|center|doctor|surgeon|lab|laboratory|place)\s+(?:in|to|that|which|with)\b'
+      - '\bfirst\s+(?:and\s+only|ever)\b'
+      - '\b(?:better|superior)\s+(?:than|to)\s+(?:any|other|others|all)\b'
+      - '\b(?:lowest|cheapest)\s+(?:price|prices|cost|rates?|package|fees?)\b'
+      - '\b(?:highest|largest|biggest|greatest|fastest|safest)\s+(?:[\w-]+\s+){0,2}?(?:in|of|across)\s+(?:the\s+)?(?:city|town|state|country|india|region|world|asia|mumbai|delhi|pune|bangalore|bengaluru|chennai|hyderabad|kolkata|ahmedabad|jaipur|lucknow|nagpur|indore|bhopal|patna|surat|kochi|gurgaon|gurugram|noida|thane|navi\s+mumbai)\b'
+      - 'सबसे\s+(?:अच्छा|अच्छे|अच्छी|बेहतरीन|बढ़िया|बेहतर|बड़ा|बड़े|भरोसेमंद|विश्वसनीय|अनुभवी|अग्रणी|सस्ता|सस्ते|सस्ती)'
+      - 'सर्वश्रेष्ठ'
+      - 'नंबर\s*(?:1|वन|एक)(?![\d])'
+      - 'नं\.?\s*1(?![\d])'
+      - 'बेस्ट'
+      - 'नंबर\s+वन'
+      - 'टॉप'
+      - 'अग्रणी'
+      - 'बेजोड़'
+      - '\bsabse\s+(?:accha|acha|achha|achhe|acche|badhiya|bdiya|behtar|behtareen|bharosemand|anubhavi|sasta)\b'
+      - '\bnumber\s+(?:wan|ek)\b'
+    exclude_before: '(?:shop|plot|flat|gate|room|house|building|bldg|platform|sector|ward|bed|unit|office|floor|block|wing|road|lane|street|cabin|counter|phase|tower|apartment|apt|door|survey|hall|stage|level|exit|entrance|page|chapter|item|serial|s\.\s?|reg(?:d|n|istration)?\.?|licen[cs]e|form|annexure|schedule|table|fig(?:ure)?|clause|section|rule|bus|route|train|vol(?:ume)?|issue|all\s+the|to\s+the|at|with|do\s+(?:our|your|my|their|his|her)|try\s+(?:our|your|my|their|his|her))\s*$'
+    exclude_after: '^[\s-]*(?:wishes|regards|practices?|of\s+luck|compliments|before|friends?|ways?\s+to|times?\s+to|to\s+(?:consult|avoid|seek|visit|see|check|get|follow|eat|drink|take|use|do|keep|stay|wear|be|speak|talk|ask|discuss)|if\b|when\b|suited|suitable|for\s+(?:you|your|children|kids|the\s+patient|each\s+patient)|course\s+of\s+action|cause|causes|reason|reasons|risk|risks|contributor|role|to\s+(?:death|complications|infection|disease|heart|kidney|stroke))'
+
+  - id: painless_miracle
+    title: '"Painless", "miracle", "magic" or "exclusive" treatment claim'
+    severity: high
+    clauses: ["8.1(iii)", "8.1(vi)"]
+    negation: true
+    why: >-
+      The guidelines name "painless treatment", "Miracle treatment" and "Exclusive cure" as
+      prohibited exaggerated claims; instant or secret remedies also create unrealistic expectations.
+    fix: >-
+      Use clinical wording instead of absolute claims, e.g. "The procedure is done under local
+      anaesthesia" or "Labour analgesia (epidural) is available", and note that experience varies.
+    patterns:
+      - '\bpain[- ]?less(?:ly)?\b'
+      - '\bpain[- ]free\b'
+      - '\b(?:zero|0)\s*%?\s*pain\b'
+      - '\bno\s+pain\b'
+      - '\bwithout\s+(?:any\s+)?pain\b'
+      - '\bmiracl(?:e|es|ulous)\b'
+      - '\bmagic(?:al)?\b'
+      - '\bwonder\s+(?:drug|cure|treatment|therapy|pill)\b'
+      - '\bexclusive\s+(?:cure|treatment|therapy|technique|technology|procedure|method|formula|remedy)\b'
+      - '\bsecret\s+(?:formula|remedy|recipe|treatment|technique|herbs?|medicine|method)\b'
+      - '\bancient\s+secret\b'
+      - '\binstant\s+(?:cure|relief|results?|recovery|healing)\b'
+      - '\bovernight\s+(?:results?|cure|relief)\b'
+      - 'दर्द\s*रहित'
+      - 'बिना\s+(?:किसी\s+)?दर्द'
+      - 'पेनलेस'
+      - 'पेन\s*लेस'
+      - 'चमत्कार'
+      - 'जादुई'
+      - 'जादू'
+      - 'तुरंत\s+(?:आराम|राहत|इलाज|असर)'
+      - 'गुप्त\s+(?:नुस्खा|फॉर्मूला|दवा|इलाज)'
+      - '\bbina\s+dard\b'
+      - '\bdard\s+rahit\b'
+      - '\bchamatkar(?:i)?\b'
+      - '\bjaa?du(?:i)?\b'
+      - '\bturant\s+(?:aaram|araam|rahat)\b'
+
+  - id: conceals_risk
+    title: Claim that hides risks (no side effects, risk-free, 100% safe)
+    severity: high
+    clauses: ["8.1(vi)"]
+    why: >-
+      Statements that conceal risks or create unrealistic expectations are prohibited. Every
+      treatment has potential risks.
+    fix: >-
+      Replace with a balanced line, e.g. "Like all medical treatments, this procedure has benefits
+      and risks; please discuss them with your doctor."
+    patterns:
+      - '\b(?:no|zero|nil|without\s+(?:any\s+)?)\s*side[- ]?effects?\b'
+      - '\bside[- ]?effect[- ]free\b'
+      - '\brisk[- ]free\b'
+      - '\b(?:no|zero)\s+risks?\b'
+      - '\b(?:100\s?%|completely|absolutely|totally|fully)\s+safe\b'
+      - 'कोई\s+(?:भी\s+)?(?:साइड\s*इफेक्ट|साइड\s*इफ़ेक्ट|दुष्प्रभाव)\s+नहीं'
+      - 'बिना\s+(?:किसी\s+)?(?:साइड\s*इफेक्ट|साइड\s*इफ़ेक्ट|दुष्प्रभाव)'
+      - '(?:साइड\s*इफेक्ट|दुष्प्रभाव)\s+(?:नहीं|फ्री|रहित)'
+      - '(?:100\s?%|पूरी\s+तरह\s+(?:से\s+)?|बिल्कुल)\s*सुरक्षित'
+      - '\bkoi\s+side\s*effects?\s+nahi\b'
+      - 'कोई\s+(?:भी\s+)?side[- ]?effects?\s+(?:नहीं|नही)'
+      - 'बिना\s+(?:किसी\s+)?side[- ]?effects?'
+      - '\bbina\s+(?:kisi\s+)?side\s*effects?\b'
+
+  - id: success_rate_numbers
+    title: Success rate or number of patients treated
+    severity: high
+    clauses: ["8.1(iii)", "8.1(v)"]
+    why: >-
+      Advertising professional success rates or the number of patients treated is expressly
+      prohibited, as are promotional personal success stories.
+    fix: >-
+      Remove success rates and patient or surgery counts. Describe the service factually, e.g.
+      "Knee replacement surgery is performed at [Hospital name]."
+    patterns:
+      - '\b\d{1,3}(?:\.\d+)?\s?%\s*(?:success|successful|success\s+rate|recovery\s+rate|cure\s+rate|satisfaction|happy|satisfied)\b'
+      - '\b(?:success|cure|recovery)\s+rate\b'
+      - '\b\d[\d,]{1,}\s*\+?\s*(?:lakhs?|thousand|k|million|crores?)?\s*\+?\s*(?:happy\s+|satisfied\s+|successful\s+|healthy\s+|smiling\s+|cured\s+|treated\s+)?(?:patients|surgeries|operations|cases|procedures|deliveries|transplants|implants|smiles|clients|families|lives|eyes|knees|hearts)\b'
+      - '\b\d+\s*(?:lakhs?|thousand|k|million|crores?)\s*\+?\s*(?:happy\s+|satisfied\s+|successful\s+)?(?:patients|surgeries|operations|cases|procedures|deliveries|transplants)\b'
+      - '\b(?:treated|operated(?:\s+on)?|cured|served|helped)\s+(?:over|more\s+than|above)?\s*\d[\d,]*\s*\+?\s*(?:lakhs?|thousand|k|million)?\s*(?:patients|people|cases)\b'
+      - '\d[\d,]*\s*\+?\s*(?:से\s+(?:अधिक|ज़्यादा|ज्यादा)\s+)?(?:(?:संतुष्ट|खुश|सफल|स्वस्थ)\s+)?(?:मरीज़ों|मरीजों|मरीज़|मरीज|रोगियों|ऑपरेशन|सर्जरी)'
+      - 'सफलता\s+दर'
+      - '(?:हज़ार|हजार|लाख)\s*\+?\s+(?:से\s+(?:ज़्यादा|ज्यादा|अधिक)\s+)?(?:(?:खुश|संतुष्ट|सफल|स्वस्थ)\s+)?(?:मरीज़ों|मरीजों|मरीज़|मरीज|रोगियों|ऑपरेशन|सर्जरी|patients)'
+      - 'सफल\s+(?:ऑपरेशन|सर्जरी|इलाज)'
+      - '\bsafalta\s+dar\b'
+      - '\b\d[\d,]*\s*\+?\s*(?:mareez|marij|mariz|marijon|mareezon)\b'
+
+  - id: inducement_offer
+    title: Discount, offer, freebie or deadline used to attract patients
+    severity: high
+    serious: true
+    clauses: ["8.1(x)", "2.1(c)"]
+    why: >-
+      Discounts, limited-period offers, contests, coupons, gifts, cashbacks, referral benefits and
+      free procedures are prohibited inducements. Inducement for patients is a serious violation.
+    fix: >-
+      Remove the offer. Fees may be stated factually, e.g. "Consultation fee: ₹500."
+    patterns:
+      - '\b\d{1,3}\s?%\s*(?:off|discount|cashback|flat\s+off)\b'
+      - '\bflat\s+\d{1,3}\s?%'
+      - '\bflat\s+(?:rs\.?|₹|inr)\s?\d'
+      - '\bdiscount(?:s|ed)?\b'
+      - '\b(?:special|limited|festive|festival|diwali|deepawali|holi|eid|christmas|new\s+year|monsoon|summer|winter|launch|introductory|exclusive|combo|mega|super|today[''`]?s|weekend|independence\s+day|republic\s+day|women[''`]?s\s+day|mother[''`]?s\s+day|father[''`]?s\s+day|valentine[''`]?s?(?:\s+day)?|birthday|anniversary)\s+(?:offer|offers|deal|deals|discount|sale|price|package\s+offer|scheme)\b'
+      - '\boffer\s+(?:valid|ends|price|period|till|until|for\s+limited)\b'
+      - '\blimited[- ](?:time|period)\b'
+      - '\b(?:hurry|grab)\b'
+      - '\bonly\s+(?:today|this\s+week|this\s+month|this\s+weekend)\b'
+      - '\b(?:today|this\s+week|this\s+month|this\s+weekend)\s+only\b'
+      - '\b(?:few|limited)\s+(?:slots?|seats?|appointments?)\b'
+      - '\bfree\s+(?:[\w-]+\s+){0,2}?(?:consultation|consult|check[- ]?ups?|tests?|screening|scans?|x[- ]?rays?|ecg|surgery|treatment|procedures?|sessions?|trial|follow[- ]?ups?|opd|camp|medicines?|second\s+opinion|visit|registration|whitening|cleaning|scaling|laser|analysis|bmd|bmi|packages?)\b'
+      - '\b(?:free\s+of\s+(?:cost|charge)|for\s+free|absolutely\s+free|completely\s+free|totally\s+free|at\s+no\s+(?:extra\s+)?cost)\b'
+      - '\b(?:coupons?|vouchers?|promo\s*codes?|cash\s?backs?|free\s+gifts?|gift\s+(?:cards?|vouchers?|hampers?)|lucky\s+draws?|giveaways?|contests?|bumper|scratch\s+cards?|reward\s+points?)\b'
+      - '\b(?:refer|referral)\s+(?:and|&|n)\s+(?:earn|get|win)\b'
+      - '\breferral\s+(?:bonus|benefits?|rewards?|discount|cashback)\b'
+      - '\brefer\s+a\s+friend\b'
+      - '\bbuy\s+(?:one|1)\s+get\s+(?:one|1)\b'
+      - '\bbogo\b'
+      - '\bno[- ]cost\s+emi\b'
+      - 'छूट(?!\s*(?:गया|गई|गए|गयी|जाता|जाती|जाते|जाए|जाएगा|जाएगी|न\s+जाए))'
+      - 'डिस्काउंट'
+      - 'ऑफर'
+      - 'ऑफ़र'
+      - 'ओफर'
+      - 'आफर'
+      - 'डिसकाउंट'
+      - 'मुफ्त'
+      - 'मुफ़्त'
+      - 'निःशुल्क'
+      - 'नि:शुल्क'
+      - 'निशुल्क'
+      - 'फ्री\s+(?:जांच|जाँच|चेकअप|चेक-अप|परामर्श|कंसल्टेशन|इलाज|ऑपरेशन|टेस्ट|कैंप|शिविर|दवा|दवाई)'
+      - 'कैशबैक'
+      - 'कूपन'
+      - 'लकी\s+ड्रा'
+      - 'उपहार'
+      - 'तोहफ़?ा'
+      - 'सीमित\s+(?:समय|अवधि|सीटें|स्लॉट)'
+      - '(?:सिर्फ|केवल)\s+आज'
+      - '\bmuft\b'
+      - '(?:फ्री|फ़्री)\s+(?:consultation|consult|check[- ]?ups?|tests?|treatment|surgery|camp)'
+      - '\bfree\s+(?:कंसल्टेशन|चेकअप|चेक-अप|जांच|जाँच|टेस्ट|इलाज|ऑपरेशन|कैंप|शिविर)'
+      - '\d{1,3}\s*(?:%|प्रतिशत|परसेंट)\s*(?:की\s+)?(?:छूट|डिस्काउंट|डिसकाउंट|discount|off|ऑफ)'
+    exclude_before: '(?:sugar|gluten|toll|smoke|tobacco|cancer|drug|alcohol|fat|caffeine|hassle|stress|pain|tension|disease|germ|dust|cruelty|शुगर|टोल)[- ]?$'
+
+  - id: price_framing
+    title: Fee framed as a sales deal
+    severity: medium
+    clauses: ["8.1(x)"]
+    why: >-
+      Fees and packages may be disclosed only in a factual, transparent way. Sales framing such as
+      "only ₹999" or "starting at" turns a fee into an inducement.
+    fix: >-
+      State the fee plainly, e.g. "Consultation fee: ₹500" or "Package charges: ₹X (includes ...)".
+    patterns:
+      - '\b(?:just|only|starting\s+(?:at|from)|starts\s+(?:at|from)|as\s+low\s+as)\s*(?:@\s*)?(?:rs\.?|₹|inr)\s?\d[\d,]*'
+      - '(?:rs\.?|₹|inr)\s?\d[\d,]*\s*(?:/-\s*)?only\b'
+      - '(?<![\w])@\s*(?:rs\.?|₹|inr)?\s?\d[\d,]*\s*(?:/-)?'
+      - '\b(?:affordable|budget|economical|pocket[- ]friendly)\s+(?:price|prices|cost|rates?|packages?|fees?|treatment|surgery)\b'
+      - '(?:सिर्फ|केवल|मात्र)\s*(?:₹|रु\.?|रुपये)?\s*\d[\d,]*\s*(?:₹|रु\.?|रुपये|रुपए)?'
+
+  - id: solicitation_cta
+    title: Direct solicitation / pushy call-to-action
+    severity: medium
+    clauses: ["8.1(ii)", "2.1(c)", "8.3(ii)"]
+    why: >-
+      Soliciting patients directly or indirectly is prohibited. Urgent calls-to-action turn factual
+      information into solicitation.
+    fix: >-
+      List contact details neutrally instead, e.g. "Appointments: 022-XXXXXXXX, Mon-Sat 10 am-6 pm."
+    patterns:
+      - '\b(?:book|call|visit|register|enrol|enroll|consult|contact|whatsapp|dm|message|walk[- ]in|rush|avail|sign\s+up|join)\b(?:\s+\w+){0,3}?\s+(?:now|today|immediately|right\s+away|asap)\b'
+      - '\b(?:don[''`]?t|do\s+not)\s+(?:wait|delay|miss)\b'
+      - '\bact\s+(?:now|fast)\b'
+      - '\bslots?\s+(?:are\s+)?filling\s+fast\b'
+      - '\bfirst\s+come[,\s]+first\s+serve[d]?\b'
+      - '\bswipe\s+up\b'
+      - '\blink\s+in\s+(?:the\s+)?bio\b'
+      - 'अभी\s+(?:कॉल|फ़ोन|फोन|बुक|संपर्क|रजिस्टर|आएं|आइए|आइये|मिलें|अपॉइंटमेंट)'
+      - 'आज\s+ही\s+(?:कॉल|फ़ोन|फोन|बुक|संपर्क|रजिस्टर|आएं|आइए|आइये|मिलें|अपॉइंटमेंट)'
+      - 'देर\s+न\s+करें'
+      - 'मौका\s+न\s+(?:चूकें|छोड़ें|गंवाएं|गवाएं)'
+      - '\babhi\s+(?:call|book|aaye|aaiye|aayein|register)\b'
+      - '\baaj\s+hi\s+(?:call|book|aaye|aaiye|aayein|register|milein)\b'
+      - '\bder\s+na\s+kar(?:ein|en|e)\b'
+
+  - id: fear_marketing
+    title: Fear-based or demand-creating message
+    severity: medium
+    clauses: ["8.1(i)", "2.1(c)"]
+    why: >-
+      Advertising intended to create unnecessary demand for procedures or diagnostics, or that uses
+      fear-based marketing, is prohibited.
+    fix: >-
+      Share balanced health information instead, e.g. "If you have chest pain or breathlessness,
+      please consult a doctor."
+    patterns:
+      - '\b(?:before|until)\s+it[''`]?s\s+too\s+late\b'
+      - '\bdon[''`]?t\s+(?:ignore|neglect)\b'
+      - '\b(?:could|can|may|might)\s+be\s+(?:cancer|fatal|deadly|life[- ]threatening|a\s+heart\s+attack|a\s+stroke)\b'
+      - '\bsilent\s+killer\b'
+      - '\b(?:ticking\s+)?time[- ]bomb\b'
+      - '\b(?:every|all)\s+(?:men|women|adults?|people|persons?|family|families)\s+(?:above|over|after)\s+\d+\s+(?:must|should)\s+(?:get|undergo|do|take)\b'
+      - '\bmust\s+get\s+(?:a\s+)?(?:full[- ]body\s+)?(?:check[- ]?up|tested|scanned|screened)\b'
+      - '\bfull[- ]body\s+(?:check[- ]?up|health\s+check(?:[- ]?up)?)\s+(?:package|offer|at|@|for\s+(?:just|only))\b'
+      - 'जानलेवा'
+      - '(?:बहुत\s+)?देर\s+हो\s+(?:जाए|जाएगी|जायेगी)'
+      - '(?:नज़रअंदाज़|नजरअंदाज|अनदेखा)\s+न\s+करें'
+      - 'खतरे\s+की\s+घंटी'
+      - '\bder\s+ho\s+jaye\b'
+      - '\bnazarandaa?z\s+na\s+kar(?:ein|en|e)\b'
+
+  - id: testimonial_review
+    title: Patient testimonial, review or rating used for promotion
+    severity: high
+    clauses: ["3.2 Expl. V", "8.1(ii)", "8.1(v)", "8.1(xi)", "6.2"]
+    why: >-
+      RMPs and institutions must not request, share or publish patient testimonials, reviews,
+      ratings or recommendations for promotion. Patient consent does not make them permissible.
+    fix: >-
+      Remove testimonials, star ratings and patient stories from promotional content.
+    patterns:
+      - '\btestimonials?\b'
+      - '\b(?:patient|patients[''`]?|customer|client|google|our|genuine|real|verified|5[- ]star|five[- ]star)\s+(?:reviews?|ratings?|feedback|stories|experiences?)\b'
+      - '\b\d(?:\.\d)?\s*(?:/\s*5\s*)?[- ]?(?:star|stars)\b'
+      - '[★⭐]{2,}'
+      - '\brated\s+\d(?:\.\d)?\b'
+      - '\b\d\.\d\s*(?:out\s+of|/)\s*5\b'
+      - '\b(?:hear\s+)?what\s+our\s+(?:patients|clients|customers)\s+(?:say|said|think)\b'
+      - '\b(?:happy|satisfied|delighted|thankful|grateful)\s+(?:patients?|customers?|clients?|families)\b'
+      - '\b(?:success|patient|recovery)\s+stor(?:y|ies)\b'
+      - '\b(?:thank\s+you|thanks|thankyou)\s+(?:so\s+much\s+)?(?:dr\.?|doctor|sir|ma[''`]?am)\b'
+      - '\bhighly\s+recommend(?:ed)?\b'
+      - '\bi\s+(?:highly\s+|strongly\s+)?recommend\s+(?:dr\.?|doctor)\b'
+      - '\bmy\s+experience\s+(?:with|at)\b'
+      - '\b(?:god|angel|messiah|bhagwan|bhagwaan)\s+(?:for|to)\s+(?:patients|us|me)\b'
+      - '\b(?:review|rate)\s+us\b'
+      - '\bleave\s+(?:us\s+)?a\s+review\b'
+      - '(?:मरीज़ों|मरीजों|रोगियों)\s+(?:की|का|के)\s+(?:राय|अनुभव|कहना|फीडबैक)'
+      - '(?:संतुष्ट|खुश)\s+(?:मरीज़|मरीज|रोगी)'
+      - 'धन्यवाद\s+(?:डॉक्टर|डॉ\.?)'
+      - '\bmareez(?:on)?\s+ka\s+anubhav\b'
+      - '\bkhush\s+mareez\b'
+
+  - id: before_after
+    title: Before/after results or advertised surgical results
+    severity: high
+    clauses: ["8.1(v)", "6.2"]
+    why: >-
+      Displaying "before and after" photographs, advertising surgical results or promoting success
+      stories is prohibited unless published strictly for scientific or educational purposes with
+      anonymised patient consent.
+    fix: >-
+      Remove before/after material and result promises from promotional content.
+    patterns:
+      - '\bbefore\s*(?:&|and|/|-|vs\.?|v/s)\s*after\b'
+      - '\bbefore[- ]after\b'
+      - '\bpre\s*(?:&|and|/|-)\s*post\b'
+      - '\b(?:see|real|actual|amazing|visible|proven|instant)\s+results?\b'
+      - '\bresults?\s+(?:in|within)\s+(?:just\s+)?\d+\s*(?:days?|weeks?|months?|sessions?|hours?)\b'
+      - '\b(?:smile|body|skin|hair|weight[- ]loss|face|facial|amazing|incredible|real|patient)\s+transformations?\b'
+      - '\btransformation\s+(?:story|stories|journey|results?|photos?|pics?|pictures?)\b'
+      - '\b(?:lost|lose)\s+\d+\s*(?:kgs?|kilos?|pounds|lbs)\s+in\s+\d+\b'
+      - 'पहले\s+(?:और|व)\s+बाद'
+      - 'पहले\s*[-/]\s*बाद'
+      - 'असली\s+(?:परिणाम|रिजल्ट)'
+      - '\d+\s+दिनों?\s+में\s+(?:असर|परिणाम|रिजल्ट|फर्क|फ़र्क|आराम)'
+      - '\bpehle\s+aur\s+baad\b'
+      - '\b\d+\s+din\s+(?:mein|me|main)\s+(?:asar|result|farak|fark|aaram)\b'
+
+  - id: celebrity_endorsement
+    title: Celebrity or influencer endorsement / celebrity patient
+    severity: high
+    clauses: ["8.1(v)", "8.1(xi)", "8.1(ii)"]
+    why: >-
+      Publicising celebrity patients or using celebrities, influencers or other third parties to
+      promote professional services is prohibited.
+    fix: >-
+      Remove celebrity or influencer references and endorsements.
+    patterns:
+      - '\bcelebrit(?:y|ies)\b'
+      - '\bbrand\s+ambassador\b'
+      - '\bas\s+seen\s+on\b'
+      - '\b(?:endorsed|recommended|approved|trusted|chosen|preferred|visited)\s+by\s+(?:celebrit|actors?|actress|cricketers?|stars?|influencers?|bollywood)'
+      - '\b(?:bollywood|film|tv|cricket)\s+(?:stars?|actors?|actress(?:es)?|celebrit(?:y|ies)|personalit(?:y|ies))\b'
+      - '\binfluencers?\b'
+      - 'सेलिब्रिटी'
+      - 'फिल्म\s+स्टार'
+      - 'अभिनेता'
+      - 'अभिनेत्री'
+      - 'क्रिकेटर'
+
+  - id: product_endorsement
+    title: Doctor endorsing a drug, device or product
+    severity: high
+    clauses: ["8.1(iv)", "8.1(ii)"]
+    why: >-
+      An RMP must not give any approval, recommendation or endorsement of a drug, device, health
+      product or commercial product with their name, photo, voice or professional status.
+    fix: >-
+      Remove the endorsement. A doctor's name, photo or title cannot be used to promote products.
+    patterns:
+      - '\b(?:doctors?|dermatologists?|dentists?|physicians?|p(?:a)?ediatricians?|gyn(?:a)?ecologists?|cardiologists?|experts?)[- ](?:recommended|approved|tested|certified|endorsed|trusted|formulated|backed)\b'
+      - '\brecommended\s+by\s+(?:doctors?|dermatologists?|dentists?|experts?|dr\.?\s)'
+      - '\b(?:dr\.?|doctor)\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?\s+(?:recommends|endorses|approves|suggests\s+(?:using|buying))\b'
+      - '\b(?:i|we)\s+(?:recommend|suggest)\s+(?:using|buying|this|our)\s+(?:product|supplement|cream|oil|capsules?|tablets?|syrup|device|brand|serum|powder|kit)\b'
+      - '\b(?:buy|order|try)\s+(?:this|our|my)\s+(?:product|supplement|cream|oil|capsules?|tablets?|syrup|device|kit|serum|powder)\b'
+      - 'डॉक्टर(?:ों)?\s+(?:द्वारा|की)\s+(?:प्रमाणित|सुझाया|अनुशंसित|मान्य|पसंद|सलाह)'
+
+  - id: referral_commission
+    title: Commission, referral fee or pay-per-patient arrangement
+    severity: high
+    clauses: ["8.1(vii)", "8.1(viii)"]
+    why: >-
+      RMPs must not offer, pay, receive or participate in commissions, referral fees or
+      lead-generation fees linked to referral or procurement of patients, and agency deals cannot be
+      paid per patient.
+    fix: >-
+      Remove any payment, reward or commission linked to patient referrals or leads.
+    patterns:
+      - '\b(?:referral|referring|lead)\s+(?:fees?|commissions?|incentives?|payouts?|charges?)\b'
+      - '\bcommissions?\s+(?:on|for|per|of)\b'
+      - '\b(?:referral|agent|doctor|lead|sales|attractive|high|\d{1,2}\s?%)\s+commissions?\b'
+      - '\bearn\s+(?:a\s+)?commissions?\b'
+      - '\bkickbacks?\b'
+      - '\bcut\s+practice\b'
+      - '\bpay(?:ment)?\s+per\s+(?:patient|lead|referral|appointment)\b'
+      - '\b(?:for|on)\s+(?:every|each)\s+(?:patient|referral|lead|case)\s+(?:referred|sent|you\s+refer)\b'
+      - 'कमीशन'
+      - 'रेफरल\s+(?:फीस|शुल्क)'
+
+  - id: fake_engagement
+    title: Bought or manipulated reviews, followers or rankings
+    severity: high
+    clauses: ["8.1(xii)", "3.2 Expl. V", "9.4"]
+    why: >-
+      Procuring or manipulating followers, likes, reviews, ratings or search rankings to create a
+      misleading impression of professional standing is prohibited.
+    fix: >-
+      Do not buy or manipulate reviews, ratings, followers or rankings.
+    patterns:
+      - '\b(?:buy|purchase)\s+(?:\d[\d,]*\s*k?\s+)?(?:followers|likes|reviews|ratings|views|subscribers)\b'
+      - '\bpaid\s+(?:reviews?|ratings?|rankings?|top\s+listing)\b'
+      - '\bboost\s+(?:your\s+)?(?:ratings?|rankings?|reviews?)\b'
+      - '\brank(?:ing)?\s+(?:#?1|first|top)\s+on\s+google\b'
+      - '\bsponsored\s+(?:rank|ranking|listing)\b'
+
+  - id: award_ranking
+    title: Award or ranking claim without verifiable details
+    severity: medium
+    clauses: ["8.1(ix) proviso"]
+    why: >-
+      Any award or ranking used in advertising must be independently verifiable, with the awarding
+      organisation, methodology, material conditions and date disclosed.
+    fix: >-
+      Keep the award only if verifiable, and add details, e.g. "[Award name], [Organisation],
+      [Year] - methodology: [link]". Otherwise remove it.
+    patterns:
+      - '\baward(?:s|ed|ee)?\b'
+      - '\baward[- ]winning\b'
+      - '\branked\s+(?:#?\d+|no\.?\s?\d+|number|first|top|among)\b'
+      - '\brankings?\b'
+      - '\bvoted\s+(?:as\s+)?(?:the\s+)?(?:best|top|no|number|#)\b'
+      - '\bwinner\s+of\b'
+      - 'पुरस्कार'
+      - 'अवॉर्ड'
+      - 'अवार्ड'
+
+  - id: doctor_self_promotion
+    title: Self-promotion of the doctor (praise, achievements)
+    severity: medium
+    clauses: ["8.1(ii)", "8.1(iii)", "8.3(ii)", "9.2"]
+    why: >-
+      RMPs must not promote themselves or their personal achievements, and hospitals must not
+      portray an individual doctor promotionally.
+    fix: >-
+      Present the doctor factually: name, recognised qualifications, specialty and SMC/NMR
+      registration number - without praise words.
+    patterns:
+      - '\b(?:renowned|famous|celebrated|eminent|legendary|star|ace|expert|highly\s+experienced|super[- ]?specialist|magician)\s+(?:doctor|surgeon|specialist|physician|dentist|cardiologist|dermatologist|gyn(?:a)?ecologist|orthop(?:a)?edic(?:ian)?|neurologist|oncologist|urologist)\b'
+      - '\bexpert\s+hands\b'
+      - '\bmaster\s+surgeon\b'
+      - '\bgold\s+medal(?:ist|list)?\b'
+      - '\bpioneer(?:s|ed|ing)?\b'
+      - '\b\d{2,}\s*\+?\s*years?\s+of\s+(?:excellence|trust|legacy|success)\b'
+      - '(?:प्रसिद्ध|मशहूर|जाने[- ]माने)\s+(?:डॉक्टर|सर्जन|विशेषज्ञ)'
+
+  - id: unproven_therapy
+    title: Unverifiable efficacy claim ("clinically proven", "no surgery needed")
+    severity: medium
+    clauses: ["8.1(vi)", "2.1(b)"]
+    negation: false
+    why: >-
+      Claims that a treatment is proven, or that a condition can be fixed without surgery, scars or
+      stitches, or by herbal or secret remedies, create unrealistic expectations unless they are
+      backed by established, verifiable evidence.
+    fix: >-
+      Describe the treatment option neutrally and let the doctor advise, e.g. "Non-surgical
+      treatment options are available where clinically suitable."
+    patterns:
+      - '\bclinically\s+(?:proven|tested|approved)\b'
+      - '\b(?:scientifically|medically)\s+proven\b'
+      - '\b(?:no|without(?:\s+any)?)\s+(?:need\s+(?:for|of)\s+)?(?:surgery|operation|knife|stitch(?:es)?|scars?|cuts?)\b'
+      - '\bavoid\s+(?:surgery|operation)\b'
+      - '\bnon[- ]surgical\s+(?:cure|solution)\b'
+      - '\bherbal\s+(?:cure|remedy)\s+for\b'
+      - 'बिना\s+(?:ऑपरेशन|सर्जरी|चीरा|टांके|टाँके)'
+      - '(?:ऑपरेशन|सर्जरी)\s+की\s+(?:कोई\s+)?(?:ज़रूरत|जरूरत|आवश्यकता)\s+नहीं'
+      - '\bbina\s+(?:operation|surgery)\b'
+
+  - id: live_surgery
+    title: Live surgery broadcast
+    severity: medium
+    clauses: ["7.5"]
+    why: >-
+      Live broadcast or commercial dissemination of surgeries must follow NMC's live-surgery
+      framework (educational purpose, consent, privacy, no commercialisation).
+    fix: >-
+      Use live surgery content only for accredited educational events that follow the NMC
+      live-surgery guidelines, not for promotion.
+    patterns:
+      - '\blive\s+(?:surgery|surgeries|operation|procedure)\b'
+      - '\bwatch\s+(?:the\s+)?(?:surgery|operation)\s+live\b'
+      - 'लाइव\s+(?:सर्जरी|ऑपरेशन)'
+
+  - id: patient_identity
+    title: Possible patient identification
+    severity: medium
+    clauses: ["6.1", "6.4", "7.4"]
+    why: >-
+      Patient names, faces, ages, locations or other identifying details must not be shared publicly
+      for advertising.
+    fix: >-
+      Remove names and any detail that could identify a patient (crop or blur images).
+    patterns:
+      - '\b(?:our|my)\s+patient\s+(?:mr|mrs|ms|miss|shri|smt)\.?\s+[A-Z]'
+      - '\b(?:mr|mrs|ms|miss|shri|smt|master|baby)\.?\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?\s*[,(]\s*(?:aged?\s*)?\d{1,3}\s*(?:yrs?|years?|y/o|yo)\b'
+      - '\bpatient\s+name\s*[:\-]'
+      - '\b(?:age|aged)\s+\d{1,3}\s*(?:yrs?|years?)?\s*,?\s*(?:from|resident\s+of|r/o)\s+[A-Z]'

@@ -1,0 +1,51 @@
+# Free hosting on Render (https://render.com). In the Render dashboard: New > Blueprint > pick this repository.
+# Free web services have 512 MB of memory and a tenth of a CPU, and sleep after 15 minutes without visitors
+# (the next visit wakes the site in about a minute). The settings below are tuned for that.
+services:
+  - type: web
+    name: adrx
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: PUBLIC_SITE
+        value: "true"
+      - key: AI_REVIEW
+        value: "off"
+      - key: FORWARDED_ALLOW_IPS  # Render puts each visitor's IP address first in X-Forwarded-For
+        value: "*"
+      - key: RATE_LIMIT_PER_HOUR
+        value: "20"
+      - key: RATE_LIMIT_PER_DAY
+        value: "60"
+      - key: MAX_PARALLEL_CHECKS
+        value: "1"
+      - key: QUEUE_WAIT_SECONDS
+        value: "240"
+      - key: MAX_UPLOAD_MB
+        value: "30"
+      - key: MAX_MEDIA_SECONDS
+        value: "120"
+      - key: MAX_PDF_PAGES
+        value: "10"
+      - key: MAX_VIDEO_FRAMES
+        value: "8"
+      - key: OCR_FRAME_SIDE
+        value: "1280"
+      - key: OCR_FRAME_WORKERS
+        value: "1"
+      # Speech-to-text by Groq's free API (the speech model doesn't fit in 512 MB). Render asks for the key;
+      # get one free at https://console.groq.com/keys. Left empty, voice notes can't be checked.
+      - key: TRANSCRIBE_BACKEND
+        value: openai
+      - key: OPENAI_BASE_URL
+        value: https://api.groq.com/openai/v1
+      - key: OPENAI_TRANSCRIBE_MODEL
+        value: whisper-large-v3-turbo
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: LOG_FILE
+        value: ""

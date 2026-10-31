@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AdRx - NMC ad compliance check</title>
+  <meta name="description" content="Check medical ads, posts, posters, voice notes and videos against the NMC Guidelines on Ethical Advertising (2026).">
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/fonts/fonts.css">
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="wrap topbar__inner">
+      <a class="brand" href="/" aria-label="AdRx home">
+        <span class="brand__mark" aria-hidden="true">℞</span>
+        <span class="brand__name">AdRx</span>
+        <span class="brand__tag">NMC ad compliance check</span>
+      </a>
+      <span class="topbar__ref" id="guideline-ref">NMC Guidelines on Ethical Advertising, 06 Oct 2026</span>
+    </div>
+  </header>
+
+  <main>
+    <section class="intro wrap" aria-labelledby="page-title">
+      <h1 id="page-title">Check an ad before you post it.</h1>
+      <p class="lede">Paste the text, or upload the post, PDF, poster, voice note or video. Every phrase that conflicts
+        with the NMC advertising guidelines gets marked, with the clause it breaks and a compliant way to say it.</p>
+    </section>
+
+    <section class="wrap">
+      <form id="check-form" class="desk" novalidate>
+        <div class="segmented" role="tablist" aria-label="Input type">
+          <button type="button" role="tab" id="tab-text" aria-selected="true" aria-controls="panel-text" class="segmented__btn is-on">Paste text</button>
+          <button type="button" role="tab" id="tab-file" aria-selected="false" aria-controls="panel-file" class="segmented__btn">Upload a file</button>
+        </div>
+
+        <div id="panel-text" role="tabpanel" aria-labelledby="tab-text" class="panel">
+          <label for="text-input" class="sr-only">Content to check</label>
+          <textarea id="text-input" name="text" rows="8" placeholder="Paste the caption, post, video script, brochure text or website copy..."></textarea>
+          <div class="examples">
+            <span>Try an example:</span>
+            <button type="button" class="linkish" data-example="en">English clinic post</button>
+            <button type="button" class="linkish" data-example="hi">Hindi post</button>
+            <button type="button" class="linkish" data-example="ok">Compliant notice</button>
+          </div>
+        </div>
+
+        <div id="panel-file" role="tabpanel" aria-labelledby="tab-file" class="panel" hidden>
+          <label id="dropzone" class="dropzone" for="file-input">
+            <input id="file-input" name="file" type="file" class="sr-only">
+            <span class="dropzone__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 16V4m0 0-4 4m4-4 4 4"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
+            </span>
+            <span class="dropzone__main" id="dropzone-main">Drop a file here, or <u>choose one</u></span>
+            <span class="dropzone__hint" id="dropzone-hint">Any audio or video (WhatsApp voice notes, MP3, M4A, AMR, MP4, MOV, MKV, 3GP and more), PDF, Word or image, up to <span id="max-mb">500</span> MB<span id="media-limit"></span></span>
+          </label>
+          <p class="privacy-note" id="privacy-note">Your file is deleted as soon as the check is done. Nothing you check is stored on this server.</p>
+          <div class="caption-field">
+            <label for="caption-input">Caption or post text that goes with it <span class="muted">(optional)</span></label>
+            <textarea id="caption-input" rows="3" placeholder="e.g. the Instagram caption under the poster"></textarea>
+          </div>
+          <div class="field field--inline" id="language-field" hidden>
+            <label for="language">Spoken language</label>
+            <select id="language" name="language">
+              <option value="auto">Detect automatically</option>
+              <option value="hi">Hindi or Hinglish</option>
+              <option value="en">English</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="options">
+          <fieldset class="field">
+            <legend>Who is publishing it?</legend>
+            <div class="chips" role="radiogroup">
+              <label class="chip"><input type="radio" name="publisher" value="rmp" checked><span>Doctor</span></label>
+              <label class="chip"><input type="radio" name="publisher" value="hospital"><span>Hospital or clinic</span></label>
+              <label class="chip"><input type="radio" name="publisher" value="agency"><span>Agency, for a doctor or hospital</span></label>
+              <label class="chip"><input type="radio" name="publisher" value="other"><span>Someone else</span></label>
+            </div>
+          </fieldset>
+          <div class="field">
+            <label for="channel">Where will it appear?</label>
+            <select id="channel" name="channel">
+              <option value="social">Social media (Instagram, Facebook, X, LinkedIn)</option>
+              <option value="youtube">YouTube or another video platform</option>
+              <option value="website">Website or online listing</option>
+              <option value="whatsapp">WhatsApp or other messaging</option>
+              <option value="tv_radio">TV or radio</option>
+              <option value="print">Newspaper, pamphlet or other print</option>
+              <option value="hoarding">Hoarding or billboard</option>
+              <option value="other">Somewhere else</option>
+            </select>
+          </div>
+          <fieldset class="field">
+            <legend>Was AI used to make any part of it?</legend>
+            <div class="chips" role="radiogroup">
+              <label class="chip"><input type="radio" name="ai_used" value="no" checked><span>No</span></label>
+              <label class="chip"><input type="radio" name="ai_used" value="yes"><span>Yes</span></label>
+              <label class="chip"><input type="radio" name="ai_used" value="unsure"><span>Not sure</span></label>
+            </div>
+          </fieldset>
+        </div>
+
+        <div class="actions">
+          <button type="submit" id="submit-btn" class="btn btn--primary">Check compliance</button>
+          <p class="mode-note" id="mode-note" aria-live="polite"></p>
+        </div>
+        <p class="form-error" id="form-error" role="alert" hidden></p>
+      </form>
+    </section>
+
+    <section id="progress" class="wrap progress" hidden aria-live="polite">
+      <div class="progress__bar"><span></span></div>
+      <p id="progress-text">Reading your content...</p>
+    </section>
+
+    <section id="result" class="wrap result" hidden aria-live="polite" tabindex="-1"></section>
+  </main>
+
+  <footer class="footer">
+    <div class="wrap">
+      <p id="disclaimer">AdRx is an independent tool and is not affiliated with or endorsed by the National Medical Commission.
+        It gives guidance, not legal advice; responsibility for published content stays with the doctor or institution.</p>
+    </div>
+  </footer>
+
+  <template id="tpl-result">
+    <div class="verdict">
+      <div class="stamp" data-verdict=""><span class="stamp__text"></span></div>
+      <div class="verdict__body">
+        <h2 class="verdict__headline"></h2>
+        <p class="verdict__summary"></p>
+        <p class="verdict__counts"></p>
+        <p class="verdict__meta"></p>
+      </div>
+    </div>
+    <ul class="warnings" hidden></ul>
+    <div class="review">
+      <div class="review__doc">
+        <h3>Your content, marked up</h3>
+        <div class="sheet"><div class="sheet__text" lang="und"></div></div>
+        <p class="legend">
+          <span class="key key--high">Prohibited</span>
+          <span class="key key--medium">Fix before posting</span>
+          <span class="key key--low">Advisory</span>
+        </p>
+      </div>
+      <div class="review__notes">
+        <h3 class="notes__title">What to change</h3>
+        <ol class="notes"></ol>
+      </div>
+    </div>
+    <div class="extras"></div>
+    <div class="result__actions">
+      <button type="button" class="btn btn--quiet" data-action="again">Check something else</button>
+      <button type="button" class="btn btn--quiet" data-action="print">Save report as PDF</button>
+    </div>
+  </template>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
