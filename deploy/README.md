@@ -14,34 +14,39 @@ poster, voice note or video. On either option below:
 | Cost | Free, no card | About ₹500-1,000 a month |
 | Address | `https://adrx.onrender.com` | `https://your-name.duckdns.org` or your domain |
 | Speed | Text in a second, posters in about 15 s, a 30-second video in a minute or two | Several times faster |
-| When idle | Kept awake by a GitHub schedule (see below); without it, sleeps after 15 minutes | Always on |
+| When idle | Sleeps after 15 minutes without visitors; the next visit waits about 50 s (see below) | Always on |
 | Files | Up to 30 MB; first 2 minutes of audio/video | Up to 100 MB; first 3 minutes |
-| Speech-to-text | Groq's free API (needs a free key) | On the server itself |
+| Speech-to-text | Small Whisper model on the server (good English, weak Hindi); better with a free Groq key | Whisper "small" on the server |
 
 ## Option A: free on Render
 
 Render (https://render.com) runs the app for free from your GitHub repository, using `render.yaml` in this
 project.
 
-1. **Get a free Groq key for speech-to-text** (optional, but voice notes and spoken words in videos need it).
-   Sign in at https://console.groq.com with Google or GitHub, open **API Keys**, click **Create API Key** and
-   copy the key (it starts with `gsk_`).
-2. **Create the site.** Sign in at https://dashboard.render.com with GitHub. Click **New**, then **Blueprint**,
+1. **Create the site.** Sign in at https://dashboard.render.com with GitHub. Click **New**, then **Blueprint**,
    and connect your GitHub account if asked. Choose the repository with this project.
-3. Render reads `render.yaml` and asks for **OPENAI_API_KEY**. Paste the Groq key (or leave it empty to skip
-   speech), then click **Deploy Blueprint**.
-4. The first build takes about 10 minutes. Then open the address Render shows, for example
+2. Render reads `render.yaml` and asks for **OPENAI_API_KEY**. Leave it empty, or paste a free Groq key (see
+   below), then click **Deploy Blueprint**.
+3. The first build takes about 10 minutes. Then open the address Render shows, for example
    `https://adrx.onrender.com`.
 
-Every change pushed to the repository redeploys the site automatically. On Render, audio is sent to Groq to be
-turned into text, and the page says so in its privacy note.
+Every change pushed to the repository redeploys the site automatically. To try the live site with the sample
+files, open the repository's **Actions** tab, choose **Check the website** and click **Run workflow**.
 
-**Keeping it awake.** The GitHub workflow `.github/workflows/keep-awake.yml` opens the site every 5 minutes, so
-it doesn't fall asleep. Awake all the time, one site uses about 744 of Render's 750 free hours a month, so
-don't add a second free service to the same Render account. If Render gave the site a different address than
-`https://adrx.onrender.com`, add a repository variable `SITE_URL` with the real address (GitHub: Settings >
-Secrets and variables > Actions > Variables). GitHub pauses scheduled workflows in a repository that has had
-no changes for 60 days; the Actions tab then offers a button to turn it back on.
+**Speech-to-text.** Without a key, voice notes and spoken words in videos are turned into text by the small
+Whisper "base" model on the server: good for clear English, weak for Hindi and Hinglish. For much better
+results, including Hindi, add a free Groq key: sign in at https://console.groq.com/keys, click **Create API
+Key**, copy it (it starts with `gsk_`), then in Render open the service's **Environment**, set
+`OPENAI_API_KEY` to the key and click **Save, rebuild, and deploy**. Audio is then sent to Groq to be turned
+into text, and the page's privacy note says so.
+
+**Sleeping.** Render puts a free site to sleep after 15 minutes without visitors. The GitHub workflow
+`.github/workflows/keep-awake.yml` opens the site on a schedule, but GitHub often starts scheduled runs late
+(30-70 minutes apart), so the site can still fall asleep. For a site that never sleeps, add a free monitor at
+https://uptimerobot.com that opens `https://adrx.onrender.com/api/health` every 5 minutes. Awake all the time,
+one site uses about 744 of Render's 750 free hours a month, so don't add a second free service to the same
+Render account. If Render gave the site a different address, add a repository variable `SITE_URL` with it
+(GitHub: Settings > Secrets and variables > Actions > Variables).
 
 ## Option B: your own server
 
