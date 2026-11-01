@@ -206,7 +206,7 @@ def health(verify_ai: bool = False) -> dict:
         "version": __version__,
         "ai_enabled": s.ai_enabled,
         "ai_model": s.claude_model if s.ai_enabled else None,
-        "transcription": s.transcribe_backend,
+        "transcription": s.speech_backend,
         "ffmpeg": s.ffmpeg_available,
         "ocr_languages": list(available_languages()),
         "max_upload_mb": s.max_upload_mb,
@@ -214,7 +214,7 @@ def health(verify_ai: bool = False) -> dict:
         "public": s.public_site,
         # where speech in audio/video is turned into text, when that is an outside service (for the privacy note)
         "speech_service": (urlparse(s.openai_base_url).hostname
-                           if s.transcribe_backend == "openai" and s.openai_api_key else None),
+                           if s.speech_backend == "openai" and s.openai_api_key else None),
         "guideline": guideline_reference(),
     }
     if verify_ai:

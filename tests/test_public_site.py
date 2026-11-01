@@ -150,7 +150,9 @@ def test_render_blueprint_fits_the_free_plan():
     env = {key: item.get("value") for key, item in _render_env().items()}
     assert env["PUBLIC_SITE"] == "true" and env["AI_REVIEW"] == "off"
     assert env["MAX_PARALLEL_CHECKS"] == "1" and env["OCR_FRAME_WORKERS"] == "1"  # 512 MB of memory
-    assert env["TRANSCRIBE_BACKEND"] == "openai" and "groq" in env["OPENAI_BASE_URL"]
+    assert env["TRANSCRIBE_BACKEND"] == "auto" and "groq" in env["OPENAI_BASE_URL"]
+    assert env["WHISPER_MODEL"] in ("tiny", "base") and env["PRELOAD_WHISPER"] == "1"  # fits 512 MB, baked in
+    assert env["WHISPER_CPU_THREADS"] == "1" and env["WHISPER_BEAM_SIZE"] == "1"  # a tenth of a CPU
     assert int(env["MAX_UPLOAD_MB"]) <= 50 and int(env["MAX_MEDIA_SECONDS"]) <= 180
 
 
@@ -165,7 +167,33 @@ def test_render_settings_are_read(monkeypatch):
             monkeypatch.setenv(key, str(item["value"]))
     s = Settings.from_env()
     assert (s.ocr_frame_side, s.ocr_frame_workers, s.max_video_frames, s.max_parallel_checks) == (1280, 1, 8, 1)
-    assert s.public_site and not s.ai_enabled and s.transcribe_backend == "openai"
+    assert (s.whisper_cpu_threads, s.whisper_beam_size) == (1, 1)
+    assert s.public_site and not s.ai_enabled and s.speech_backend == "local"  # no Groq key: the server's model
+    monkeypatch.setenv("OPENAI_API_KEY", "gsk_test")
+    assert Settings.from_env().speech_backend == "openai"  # with a Groq key: Groq
+
+
+def test_auto_speech_uses_the_local_model_without_a_key(monkeypatch, samples):
+    from app.extract import transcribe
+
+    calls = []
+
+    class Fake:
+        def transcribe(self, audio, **kwargs):
+            calls.append(kwargs["beam_size"])
+            return iter([type("S", (), {"text": "hello"})()]), type("I", (), {"language": "en"})()
+
+    monkeypatch.setattr(transcribe, "_local_model", lambda s: Fake())
+    monkeypatch.setenv("TRANSCRIBE_BACKEND", "auto")
+    monkeypatch.setenv("WHISPER_BEAM_SIZE", "1")
+    from tests.conftest import has_ffmpeg
+
+    if not has_ffmpeg():
+        pytest.skip("needs ffmpeg")
+    with open(samples / "voice_note_3_english_compliant.ogg", "rb") as fh:
+        r = client.post("/api/check", files={"file": ("note.ogg", fh, "audio/ogg")})
+    assert r.status_code == 200 and calls == [1]
+    assert client.get("/api/health").json()["transcription"] == "local"
 
 
 def test_privacy_note_names_the_outside_speech_service(monkeypatch, public):

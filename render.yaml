@@ -37,10 +37,19 @@ services:
         value: "1280"
       - key: OCR_FRAME_WORKERS
         value: "1"
-      # Speech-to-text by Groq's free API (the speech model doesn't fit in 512 MB). Render asks for the key;
-      # get one free at https://console.groq.com/keys. Left empty, voice notes can't be checked.
+      # Speech-to-text: without a key, the small Whisper "base" model runs on the server itself (fine for
+      # English, weak for Hindi). With a free Groq key (https://console.groq.com/keys) in OPENAI_API_KEY,
+      # Groq's much better large-v3-turbo model is used instead.
       - key: TRANSCRIBE_BACKEND
-        value: openai
+        value: auto
+      - key: WHISPER_MODEL  # also read by the Docker build, which bakes the model into the image
+        value: base
+      - key: PRELOAD_WHISPER
+        value: "1"
+      - key: WHISPER_CPU_THREADS
+        value: "1"
+      - key: WHISPER_BEAM_SIZE
+        value: "1"
       - key: OPENAI_BASE_URL
         value: https://api.groq.com/openai/v1
       - key: OPENAI_TRANSCRIBE_MODEL

@@ -4,6 +4,7 @@ Backends (TRANSCRIBE_BACKEND):
 - local  : faster-whisper on this machine (default). The model downloads on first use.
            WHISPER_MODEL=small is quick on CPU; large-v3-turbo is much better for Hindi/Hinglish.
 - openai : any OpenAI-compatible /audio/transcriptions API (OpenAI, Groq, ...).
+- auto   : openai when OPENAI_API_KEY is set, otherwise local (used by the free website on Render).
 - none   : skip speech; only on-screen text is read from videos.
 """
 
@@ -35,14 +36,16 @@ _models: dict[tuple[str, str, str], object] = {}
 
 
 def _local_model(settings: Settings):
-    key = (settings.whisper_model, settings.whisper_device, settings.whisper_compute_type)
+    key = (settings.whisper_model, settings.whisper_device, settings.whisper_compute_type,
+           settings.whisper_cpu_threads)
     with _model_lock:
         if key not in _models:
             from faster_whisper import WhisperModel
 
-            log.info("Loading faster-whisper model %s (%s/%s)...", *key)
+            log.info("Loading faster-whisper model %s (%s/%s, threads %s)...", *key)
             _models[key] = WhisperModel(
-                settings.whisper_model, device=settings.whisper_device, compute_type=settings.whisper_compute_type
+                settings.whisper_model, device=settings.whisper_device, compute_type=settings.whisper_compute_type,
+                cpu_threads=settings.whisper_cpu_threads,
             )
         return _models[key]
 
@@ -90,7 +93,7 @@ def _transcribe_local(wav_path: Path, language: str | None, settings: Settings) 
             audio,
             language=language,
             task="transcribe",
-            beam_size=5,
+            beam_size=settings.whisper_beam_size,
             vad_filter=vad,
             condition_on_previous_text=False,
         )
@@ -134,7 +137,7 @@ def _transcribe_openai(wav_path: Path, language: str | None, settings: Settings)
 
 def transcribe(wav_path: Path, language: str | None, settings: Settings) -> Transcript:
     """Transcribe a 16 kHz mono WAV file. ``language`` is an ISO code ("en", "hi") or None for auto."""
-    backend = settings.transcribe_backend
+    backend = settings.speech_backend
     if backend == "none":
         raise TranscriptionError("Speech-to-text is switched off (TRANSCRIBE_BACKEND=none)")
     if backend == "openai":

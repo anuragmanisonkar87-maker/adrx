@@ -65,7 +65,7 @@ def main(argv: list[str] | None = None) -> int:
     if not ok:
         return 1
 
-    backend = settings.transcribe_backend
+    backend = settings.speech_backend
     print(f"\n2) Speech-to-text: {backend}")
     if backend == "none":
         _say("WARN", "TRANSCRIBE_BACKEND=none in .env, so speech is not transcribed. Set it to local.")

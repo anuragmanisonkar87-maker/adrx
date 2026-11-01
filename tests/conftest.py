@@ -20,9 +20,10 @@ def _no_real_ai(monkeypatch):
     monkeypatch.setenv("AI_REVIEW_EFFORT", "medium")
     monkeypatch.delenv("BASIC_AUTH_USER", raising=False)
     monkeypatch.delenv("BASIC_AUTH_PASSWORD", raising=False)
+    # website and speech settings: each test sets what it needs
     for name in ("PUBLIC_SITE", "AI_REVIEW", "RATE_LIMIT_PER_HOUR", "RATE_LIMIT_PER_DAY", "MAX_PARALLEL_CHECKS",
                  "QUEUE_WAIT_SECONDS", "OCR_FRAME_SIDE", "OCR_FRAME_WORKERS", "TRANSCRIBE_BACKEND", "OPENAI_API_KEY",
-                 "OPENAI_BASE_URL", "OPENAI_TRANSCRIBE_MODEL"):  # website/speech settings: tests set what they need
+                 "OPENAI_BASE_URL", "OPENAI_TRANSCRIBE_MODEL", "WHISPER_CPU_THREADS", "WHISPER_BEAM_SIZE"):
         monkeypatch.delenv(name, raising=False)
     from app.main import visitor_limits
 

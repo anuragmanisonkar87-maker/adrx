@@ -1,0 +1,38 @@
+# Checks the live website with real sample files. Run it from the Actions tab (Check the website > Run workflow).
+name: Check the website
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  SITE_URL: ${{ vars.SITE_URL || 'https://adrx.onrender.com' }}
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Wake the site
+        run: curl -fsS --retry 8 --retry-delay 15 --retry-all-errors --max-time 120 "$SITE_URL/api/health"
+
+      - name: Check samples
+        run: |
+          show() {
+            python3 -c '
+          import json, sys
+          body = json.load(sys.stdin)
+          if "verdict" not in body:
+              print("ERROR:", body); sys.exit(1)
+          print(body["verdict"], "-", body["headline"], "(%.0f s)" % (body.get("elapsed_ms", 0) / 1000))
+          print(body["text"][:500])
+          print("warnings:", body.get("warnings"))'
+          }
+          for file in voice_note_2_english_not_compliant.ogg reel_en.mp4 poster_en.png; do
+            echo "=== $file"
+            curl -sS --max-time 900 -F "file=@samples/$file" -F publisher=hospital "$SITE_URL/api/check" | show
+          done

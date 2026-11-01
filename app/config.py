@@ -44,10 +44,12 @@ class Settings:
     ai_max_images: int
 
     # Speech-to-text for audio/video
-    transcribe_backend: str  # local | openai | none
+    transcribe_backend: str  # local | openai | auto (openai when OPENAI_API_KEY is set, else local) | none
     whisper_model: str  # faster-whisper model size, e.g. small, medium, large-v3-turbo
     whisper_device: str  # cpu | cuda | auto
     whisper_compute_type: str  # int8 on CPU, float16 on GPU
+    whisper_cpu_threads: int  # 0 = faster-whisper's default (4); 1 on a small server
+    whisper_beam_size: int  # 5 = most accurate; 1 = several times faster
     openai_api_key: str | None  # for TRANSCRIBE_BACKEND=openai (OpenAI, Groq or any compatible API)
     openai_base_url: str
     openai_transcribe_model: str
@@ -77,6 +79,13 @@ class Settings:
         return self.ai_review and bool(self.anthropic_api_key)
 
     @property
+    def speech_backend(self) -> str:
+        """The speech-to-text backend actually used ("auto" picks the outside API only when its key is set)."""
+        if self.transcribe_backend == "auto":
+            return "openai" if self.openai_api_key else "local"
+        return self.transcribe_backend
+
+    @property
     def ffmpeg_available(self) -> bool:
         return shutil.which("ffmpeg") is not None and shutil.which("ffprobe") is not None
 
@@ -96,6 +105,8 @@ class Settings:
             whisper_model=os.getenv("WHISPER_MODEL", "small"),
             whisper_device=os.getenv("WHISPER_DEVICE", "cpu"),
             whisper_compute_type=os.getenv("WHISPER_COMPUTE_TYPE", "int8"),
+            whisper_cpu_threads=max(_int("WHISPER_CPU_THREADS", 0), 0),
+            whisper_beam_size=max(_int("WHISPER_BEAM_SIZE", 5), 1),
             openai_api_key=os.getenv("OPENAI_API_KEY") or None,
             openai_base_url=os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1").rstrip("/"),
             openai_transcribe_model=os.getenv("OPENAI_TRANSCRIBE_MODEL", "whisper-1"),
