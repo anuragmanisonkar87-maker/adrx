@@ -13,12 +13,18 @@ env:
 jobs:
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
 
       - name: Wake the site
-        run: curl -fsS --retry 8 --retry-delay 15 --retry-all-errors --max-time 120 "$SITE_URL/api/health"
+        run: |
+          curl -fsS --retry 8 --retry-delay 15 --retry-all-errors --max-time 120 "$SITE_URL/api/health" | python3 -c '
+          import json, sys
+          h = json.load(sys.stdin)
+          print("version:", h.get("version"))
+          print("speech-to-text:", h.get("transcription"), h.get("speech_service") or "(on the server)")
+          print("keeps itself awake:", h.get("keep_awake"))'
 
       - name: Check samples
         run: |
@@ -29,10 +35,17 @@ jobs:
           if "verdict" not in body:
               print("ERROR:", body); sys.exit(1)
           print(body["verdict"], "-", body["headline"], "(%.0f s)" % (body.get("elapsed_ms", 0) / 1000))
-          print(body["text"][:500])
+          print(body["text"][:600])
+          print("flagged:", " | ".join(f["quote"] for f in body.get("findings", [])))
           print("warnings:", body.get("warnings"))'
           }
-          for file in voice_note_2_english_not_compliant.ogg reel_en.mp4 poster_en.png; do
-            echo "=== $file"
-            curl -sS --max-time 900 -F "file=@samples/$file" -F publisher=hospital "$SITE_URL/api/check" | show
-          done
+          check() {  # file, spoken language, who publishes it
+            echo
+            echo "=== $1 (language: $2)"
+            curl -sS --max-time 900 -F "file=@samples/$1" -F "language=$2" -F "publisher=$3" "$SITE_URL/api/check" | show
+          }
+          check voice_note_2_english_not_compliant.ogg auto rmp
+          check voice_note_1_hinglish_not_compliant.ogg hi rmp
+          check voice_note_4_hindi_needs_changes.ogg hi rmp
+          check reel_en.mp4 auto hospital
+          check poster_en.png auto hospital

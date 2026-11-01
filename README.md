@@ -158,7 +158,7 @@ minutes pay about a twentieth of the normal price for it.
 Two ways, both explained step by step in [deploy/README.md](deploy/README.md):
 
 - **Free on Render**: `render.yaml` runs the app on Render's free plan straight from your GitHub repository
-  (it sleeps when idle; speech-to-text through Groq's free API).
+  (it keeps itself awake; speech-to-text runs on the server, or through Groq's free API for accurate Hindi).
 - **Your own server**: `deploy/` installs Docker and starts the app behind Caddy, which gets a free HTTPS
   certificate, with one command.
 
@@ -195,6 +195,7 @@ Cloud Run or a VM.
 | `AI_REVIEW` | `on` | `off` keeps AI review off even when a key is set. |
 | `RATE_LIMIT_PER_HOUR` / `RATE_LIMIT_PER_DAY` | 0 / 0 | Checks per visitor (IP address); 0 = no limit. |
 | `MAX_PARALLEL_CHECKS` / `QUEUE_WAIT_SECONDS` | 0 / 120 | Files processed at once (0 = no limit) and how long others wait. |
+| `KEEP_AWAKE` / `KEEP_AWAKE_MINUTES` | `off` / 10 | For free hosts that sleep when idle: the app opens its own address every few minutes. The address is Render's `RENDER_EXTERNAL_URL`, or set `KEEP_AWAKE_URL`. |
 
 ## API
 

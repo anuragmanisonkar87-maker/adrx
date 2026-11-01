@@ -11,7 +11,7 @@ import secrets
 import tempfile
 import threading
 import time
-from contextlib import contextmanager
+from contextlib import asynccontextmanager, contextmanager
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -19,7 +19,7 @@ from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 
-from app import __version__, extract
+from app import __version__, extract, keep_awake
 from app.config import Settings
 from app.engine import ai_review
 from app.engine.checker import NothingToCheck, run_check
@@ -56,10 +56,19 @@ log = logging.getLogger("nmc")
 STATIC_DIR = PROJECT_DIR / "static"
 LANGUAGES = {"auto": None, "en": "en", "hi": "hi"}
 
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    keep_awake.start(Settings.from_env())  # only with KEEP_AWAKE=on (the free website on Render)
+    yield
+    keep_awake.stop()
+
+
 app = FastAPI(
     title="NMC Ad Compliance Checker",
     version=__version__,
     description="Checks medical advertising content against the NMC Guidelines on Ethical Advertising (2026).",
+    lifespan=lifespan,
 )
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
@@ -215,6 +224,7 @@ def health(verify_ai: bool = False) -> dict:
         # where speech in audio/video is turned into text, when that is an outside service (for the privacy note)
         "speech_service": (urlparse(s.openai_base_url).hostname
                            if s.speech_backend == "openai" and s.openai_api_key else None),
+        "keep_awake": keep_awake.running(),
         "guideline": guideline_reference(),
     }
     if verify_ai:

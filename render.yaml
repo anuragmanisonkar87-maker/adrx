@@ -1,6 +1,6 @@
 # Free hosting on Render (https://render.com). In the Render dashboard: New > Blueprint > pick this repository.
 # Free web services have 512 MB of memory and a tenth of a CPU, and sleep after 15 minutes without visitors
-# (the next visit wakes the site in about a minute). The settings below are tuned for that.
+# (the next visit then waits about a minute). The settings below are tuned for that.
 services:
   - type: web
     name: adrx
@@ -37,9 +37,14 @@ services:
         value: "1280"
       - key: OCR_FRAME_WORKERS
         value: "1"
+      # The app opens its own address (Render sets RENDER_EXTERNAL_URL) every 10 minutes, so the site never
+      # falls asleep. Awake all month, it uses about 744 of the 750 free hours a Render workspace gets, so
+      # keep no other free web service in the same workspace (or set this to "off").
+      - key: KEEP_AWAKE
+        value: "on"
       # Speech-to-text: without a key, the small Whisper "base" model runs on the server itself (fine for
       # English, weak for Hindi). With a free Groq key (https://console.groq.com/keys) in OPENAI_API_KEY,
-      # Groq's much better large-v3-turbo model is used instead.
+      # Groq runs Whisper large-v3 instead, its most accurate model for Hindi and Hinglish.
       - key: TRANSCRIBE_BACKEND
         value: auto
       - key: WHISPER_MODEL  # also read by the Docker build, which bakes the model into the image
@@ -53,7 +58,7 @@ services:
       - key: OPENAI_BASE_URL
         value: https://api.groq.com/openai/v1
       - key: OPENAI_TRANSCRIBE_MODEL
-        value: whisper-large-v3-turbo
+        value: whisper-large-v3
       - key: OPENAI_API_KEY
         sync: false
       - key: LOG_FILE

@@ -23,7 +23,8 @@ def _no_real_ai(monkeypatch):
     # website and speech settings: each test sets what it needs
     for name in ("PUBLIC_SITE", "AI_REVIEW", "RATE_LIMIT_PER_HOUR", "RATE_LIMIT_PER_DAY", "MAX_PARALLEL_CHECKS",
                  "QUEUE_WAIT_SECONDS", "OCR_FRAME_SIDE", "OCR_FRAME_WORKERS", "TRANSCRIBE_BACKEND", "OPENAI_API_KEY",
-                 "OPENAI_BASE_URL", "OPENAI_TRANSCRIBE_MODEL", "WHISPER_CPU_THREADS", "WHISPER_BEAM_SIZE"):
+                 "OPENAI_BASE_URL", "OPENAI_TRANSCRIBE_MODEL", "WHISPER_CPU_THREADS", "WHISPER_BEAM_SIZE",
+                 "KEEP_AWAKE", "KEEP_AWAKE_URL", "KEEP_AWAKE_MINUTES", "RENDER_EXTERNAL_URL"):
         monkeypatch.delenv(name, raising=False)
     from app.main import visitor_limits
 

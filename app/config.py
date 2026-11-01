@@ -31,6 +31,14 @@ def _bool(name: str, default: bool) -> bool:
     return value in ("1", "true", "yes", "on")
 
 
+def _site_address() -> str | None:
+    """The website's public address, for KEEP_AWAKE. Render sets RENDER_EXTERNAL_URL by itself."""
+    value = (os.getenv("KEEP_AWAKE_URL") or os.getenv("RENDER_EXTERNAL_URL") or "").strip().rstrip("/")
+    if value and "://" not in value:
+        value = f"https://{value}"
+    return value or None
+
+
 @dataclass(frozen=True)
 class Settings:
     # AI review (Claude). Without a key the tool runs in "quick check" (rules-only) mode.
@@ -73,6 +81,9 @@ class Settings:
     rate_limit_per_day: int
     max_parallel_checks: int  # file checks that run at the same time; 0 = no limit
     queue_wait_seconds: int  # how long a file check waits for a free slot before "busy"
+    keep_awake: bool  # the app opens its own address every few minutes (free hosts sleep after 15 idle minutes)
+    keep_awake_url: str | None  # the site's public address (KEEP_AWAKE_URL, else Render's RENDER_EXTERNAL_URL)
+    keep_awake_minutes: int  # 1-14, so a visit always comes before Render's 15 idle minutes are up
 
     @property
     def ai_enabled(self) -> bool:
@@ -124,4 +135,7 @@ class Settings:
             rate_limit_per_day=_int("RATE_LIMIT_PER_DAY", 0),
             max_parallel_checks=_int("MAX_PARALLEL_CHECKS", 0),
             queue_wait_seconds=_int("QUEUE_WAIT_SECONDS", 120),
+            keep_awake=_bool("KEEP_AWAKE", False),
+            keep_awake_url=_site_address(),
+            keep_awake_minutes=min(max(_int("KEEP_AWAKE_MINUTES", 10), 1), 14),
         )

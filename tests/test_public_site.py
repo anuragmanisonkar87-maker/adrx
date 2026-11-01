@@ -151,6 +151,8 @@ def test_render_blueprint_fits_the_free_plan():
     assert env["PUBLIC_SITE"] == "true" and env["AI_REVIEW"] == "off"
     assert env["MAX_PARALLEL_CHECKS"] == "1" and env["OCR_FRAME_WORKERS"] == "1"  # 512 MB of memory
     assert env["TRANSCRIBE_BACKEND"] == "auto" and "groq" in env["OPENAI_BASE_URL"]
+    assert env["OPENAI_TRANSCRIBE_MODEL"] == "whisper-large-v3"  # Groq's most accurate model for Hindi
+    assert env["KEEP_AWAKE"] == "on"  # Render sets RENDER_EXTERNAL_URL, the address the app visits
     assert env["WHISPER_MODEL"] in ("tiny", "base") and env["PRELOAD_WHISPER"] == "1"  # fits 512 MB, baked in
     assert env["WHISPER_CPU_THREADS"] == "1" and env["WHISPER_BEAM_SIZE"] == "1"  # a tenth of a CPU
     assert int(env["MAX_UPLOAD_MB"]) <= 50 and int(env["MAX_MEDIA_SECONDS"]) <= 180
