@@ -259,6 +259,7 @@ Cloud Run or a VM.
 | `ADMIN_USERNAME` / `ADMIN_PASSWORD` | `admin` / - | The first admin account, created at start-up while it doesn't exist. |
 | `ADMIN_PASSWORD_RESET` | `off` | `on`: at start-up, set the admin's password to `ADMIN_PASSWORD` (forgotten password). |
 | `DATABASE_URL` | - | Keep accounts in Supabase or another Postgres; empty = SQLite file in `DATA_DIR`. |
+| `DATABASE_PASSWORD` | - | The database password, put in place of `[YOUR-PASSWORD]` in `DATABASE_URL` (so the address can be pasted as Supabase shows it). |
 | `DATA_DIR` | `data` | Folder for the SQLite accounts file. |
 | `SESSION_IDLE_HOURS` / `SESSION_MAX_DAYS` | 12 / 7 | Signed out after this long without using the site / in any case. |
 | `PUBLIC_SITE` | `false` | Visitors' view: no setup hints, no `/docs` API pages. |

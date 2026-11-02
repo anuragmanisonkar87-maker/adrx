@@ -164,7 +164,7 @@ def test_render_blueprint_fits_the_free_plan():
 
 def test_render_asks_for_secrets_instead_of_storing_them():
     env = _render_env()
-    for name in ("OPENAI_API_KEY", "ADMIN_PASSWORD", "DATABASE_URL"):
+    for name in ("OPENAI_API_KEY", "ADMIN_PASSWORD", "DATABASE_URL", "DATABASE_PASSWORD"):
         assert env[name] == {"key": name, "sync": False}
 
 

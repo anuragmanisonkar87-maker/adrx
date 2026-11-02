@@ -44,8 +44,9 @@ services:
         value: "on"
       # Sign-in: every check needs an account, and the admin manages accounts on the site's Users page.
       # ADMIN_PASSWORD is the first password of the "admin" account (at least 10 characters). DATABASE_URL is
-      # where accounts are kept: Supabase's "Session pooler" connection string (deploy/README.md). Without it,
-      # accounts are kept on Render's disk, which is wiped at every deploy and restart.
+      # where accounts are kept: Supabase's "Session pooler" connection string, pasted as Supabase shows it, and
+      # DATABASE_PASSWORD is the database password (deploy/README.md). Without DATABASE_URL, accounts are kept on
+      # Render's disk, which is wiped at every deploy and restart.
       - key: REQUIRE_LOGIN
         value: "on"
       - key: ADMIN_USERNAME
@@ -53,6 +54,8 @@ services:
       - key: ADMIN_PASSWORD
         sync: false
       - key: DATABASE_URL
+        sync: false
+      - key: DATABASE_PASSWORD  # Supabase's database password; fills [YOUR-PASSWORD] in DATABASE_URL
         sync: false
       # Speech-to-text: without a key, the small Whisper "base" model runs on the server itself (fine for
       # English, weak for Hindi). With a free Groq key (https://console.groq.com/keys) in OPENAI_API_KEY,

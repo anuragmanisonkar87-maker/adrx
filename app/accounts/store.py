@@ -172,7 +172,8 @@ def normalize_database_url(url: str) -> str:
     if not sep:
         raise ValueError("DATABASE_URL must look like postgresql://user:password@host:5432/postgres")
     if "YOUR-PASSWORD" in url.upper() or "YOUR_PASSWORD" in url.upper():
-        raise ValueError("DATABASE_URL still has the [YOUR-PASSWORD] placeholder: put the database password there")
+        raise ValueError("DATABASE_URL still has the [YOUR-PASSWORD] placeholder: set DATABASE_PASSWORD to the "
+                         "database password, or put the password in its place")
     scheme = scheme.lower()
     if scheme in ("postgres", "postgresql", "postgresql+psycopg", "postgresql+psycopg2"):
         scheme = "postgresql+psycopg"
@@ -188,6 +189,24 @@ def normalize_database_url(url: str) -> str:
         kept = [p for p in query.split("&") if p.split("=", 1)[0].lower() not in ORM_ONLY_OPTIONS]
         rest = base + (f"?{'&'.join(kept)}" if kept else "")
     return f"{scheme}://{rest}"
+
+
+PLACEHOLDERS = ("[YOUR-PASSWORD]", "[YOUR_PASSWORD]", "[PASSWORD]")
+
+
+def with_password(url: str, password: str) -> str:
+    """Puts DATABASE_PASSWORD into the address: in place of Supabase's [YOUR-PASSWORD], or as the password."""
+    encoded = quote(password, safe="")
+    for placeholder in PLACEHOLDERS:
+        start = url.upper().find(placeholder)
+        if start >= 0:
+            return url[:start] + encoded + url[start + len(placeholder):]
+    scheme, sep, rest = url.strip().partition("://")
+    creds, at, host_part = rest.rpartition("@")
+    if not sep or not at:
+        return url
+    user = creds.partition(":")[0]
+    return f"{scheme}://{user}:{encoded}@{host_part}"
 
 
 ORM_ONLY_OPTIONS = {"pgbouncer", "connection_limit", "pool_timeout", "schema", "statement_cache_size",
@@ -472,7 +491,10 @@ _stores_lock = threading.Lock()
 
 def database_url(settings: Settings) -> str:
     if settings.database_url:
-        return normalize_database_url(settings.database_url)
+        url = settings.database_url
+        if settings.database_password:
+            url = with_password(url.strip().strip('"').strip("'"), settings.database_password)
+        return normalize_database_url(url)
     path = settings.data_dir / "accounts.db"
     path.parent.mkdir(parents=True, exist_ok=True)
     return f"sqlite:///{path.as_posix()}"

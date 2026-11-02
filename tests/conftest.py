@@ -25,7 +25,7 @@ def _no_real_ai(monkeypatch):
                  "QUEUE_WAIT_SECONDS", "OCR_FRAME_SIDE", "OCR_FRAME_WORKERS", "TRANSCRIBE_BACKEND", "OPENAI_API_KEY",
                  "OPENAI_BASE_URL", "OPENAI_TRANSCRIBE_MODEL", "WHISPER_CPU_THREADS", "WHISPER_BEAM_SIZE",
                  "KEEP_AWAKE", "KEEP_AWAKE_URL", "KEEP_AWAKE_MINUTES", "RENDER_EXTERNAL_URL", "RENDER",
-                 "REQUIRE_LOGIN", "DATABASE_URL", "DATA_DIR", "ADMIN_USERNAME", "ADMIN_PASSWORD",
+                 "REQUIRE_LOGIN", "DATABASE_URL", "DATABASE_PASSWORD", "DATA_DIR", "ADMIN_USERNAME", "ADMIN_PASSWORD",
                  "ADMIN_PASSWORD_RESET", "SESSION_IDLE_HOURS", "SESSION_MAX_DAYS"):
         monkeypatch.delenv(name, raising=False)
     from app.accounts import reset_stores

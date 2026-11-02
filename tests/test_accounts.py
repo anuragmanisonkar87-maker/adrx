@@ -425,6 +425,21 @@ def test_database_addresses_from_supabase_paste_cleanly():
         normalize_database_url("postgresql://postgres.abcd:[YOUR-PASSWORD]@aws-0-x.pooler.supabase.com:5432/postgres")
 
 
+def test_database_password_can_be_its_own_setting(monkeypatch):
+    from app.accounts.store import database_url
+
+    shown = "postgresql://postgres.abcd:[YOUR-PASSWORD]@aws-0-ap-south-1.pooler.supabase.com:5432/postgres"
+    monkeypatch.setenv("DATABASE_URL", shown)  # pasted exactly as Supabase shows it
+    monkeypatch.setenv("DATABASE_PASSWORD", "s3cret@100%/x")
+    assert database_url(Settings.from_env()) == (
+        "postgresql+psycopg://postgres.abcd:s3cret%40100%25%2Fx@aws-0-ap-south-1.pooler.supabase.com:5432/postgres")
+    monkeypatch.setenv("DATABASE_URL", "postgres://u:old@h:5432/db")  # the separate setting wins
+    assert database_url(Settings.from_env()) == "postgresql+psycopg://u:s3cret%40100%25%2Fx@h:5432/db"
+    monkeypatch.setenv("DATABASE_URL", "postgres://u@h:5432/db")
+    assert database_url(Settings.from_env()) == "postgresql+psycopg://u:s3cret%40100%25%2Fx@h:5432/db"
+    assert "s3cret" not in repr(Settings.from_env())
+
+
 def test_unreachable_database_says_what_to_fix(monkeypatch, tmp_path, caplog):
     monkeypatch.setenv("REQUIRE_LOGIN", "on")
     monkeypatch.setenv("DATABASE_URL", "postgresql://postgres:pw@db.abcdefgh.supabase.co:5432/postgres")

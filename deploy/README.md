@@ -30,23 +30,24 @@ starts the server with an empty disk at every deploy and restart.
 1. **Create the database.** Sign in at https://supabase.com/dashboard and click **New project**. Name it
    `adrx`, click **Generate a password** and keep the password somewhere safe, choose the region
    **Southeast Asia (Singapore)** (where the Render site runs), and click **Create new project**.
-2. **Copy its address.** When the project is ready, click **Connect** at the top of the project page. Under
-   **Session pooler**, copy the connection string. It looks like
+2. **Copy its address.** When the project is ready, click **Connect** at the top of the project page, then
+   **Direct**, and choose **Session pooler**. Copy the connection string as it is. It looks like
    `postgresql://postgres.abcdefgh:[YOUR-PASSWORD]@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres`.
-   Put the database password in place of `[YOUR-PASSWORD]`, without the brackets. Use the session pooler, not
-   the direct connection, which Render can't reach.
+   Use the session pooler, not the direct connection, which Render can't reach. (Forgot the database password?
+   Supabase can't show it again: **Project Settings > Database > Reset password** sets a new one.)
 3. **Create the site.** Sign in at https://dashboard.render.com with GitHub. Click **New**, then **Blueprint**,
    and connect your GitHub account if asked. Choose the repository with this project. Render reads
    `render.yaml` and asks for these values:
    - **ADMIN_PASSWORD**: the first password of the `admin` account, at least 10 characters.
-   - **DATABASE_URL**: the connection string from step 2.
+   - **DATABASE_URL**: the connection string from step 2, exactly as copied (with `[YOUR-PASSWORD]`).
+   - **DATABASE_PASSWORD**: the database password. The app puts it in place of `[YOUR-PASSWORD]`.
    - **OPENAI_API_KEY**: leave it empty, or paste a free Groq key (see below).
 
    Then click **Deploy Blueprint**.
 4. The first build takes about 10 minutes. Then open the address Render shows, for example
    `https://adrx.onrender.com`. Sign in as `admin`, and add accounts on the **Users** page.
 
-If the site was created before sign-in existed, add `ADMIN_PASSWORD` and `DATABASE_URL` on the service's
+If the site was created before sign-in existed, add `ADMIN_PASSWORD`, `DATABASE_URL` and `DATABASE_PASSWORD` on the service's
 **Environment** page instead: click **Edit**, then **Add variable** for each one, then **Save, rebuild, and
 deploy**.
 

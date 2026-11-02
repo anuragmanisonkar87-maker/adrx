@@ -95,6 +95,7 @@ class Settings:
     # Sign-in and user accounts (README "Sign-in and user accounts")
     require_login: bool  # REQUIRE_LOGIN=on: every page and every check needs an account
     database_url: str | None = field(repr=False)  # Supabase or other Postgres; empty = SQLite file in DATA_DIR
+    database_password: str | None = field(repr=False)  # fills [YOUR-PASSWORD] (or the password) in DATABASE_URL
     data_dir: Path  # where the SQLite accounts file lives when DATABASE_URL is empty
     admin_username: str
     admin_password: str | None = field(repr=False)  # creates the first admin account when it doesn't exist
@@ -157,6 +158,7 @@ class Settings:
             keep_awake_minutes=min(max(_int("KEEP_AWAKE_MINUTES", 10), 1), 14),
             require_login=_bool("REQUIRE_LOGIN", False),
             database_url=(os.getenv("DATABASE_URL") or "").strip() or None,
+            database_password=os.getenv("DATABASE_PASSWORD") or None,
             data_dir=_path("DATA_DIR", PROJECT_DIR / "data"),
             admin_username=(os.getenv("ADMIN_USERNAME") or "admin").strip().lower(),
             admin_password=os.getenv("ADMIN_PASSWORD") or None,
