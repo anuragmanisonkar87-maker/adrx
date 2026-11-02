@@ -70,6 +70,6 @@ def password_problem(password: str, username: str = "") -> str | None:
     lowered = password.lower()
     if lowered in COMMON or len(set(lowered)) < 4:
         return "This password is too easy to guess. Try a few unrelated words, or a longer mix."
-    if username and username.lower() in lowered and len(password) < 16:
-        return "Don't build the password around the username (or make it at least 16 characters)."
+    if username and username.lower() in lowered and len(lowered.replace(username.lower(), "")) < MIN_LENGTH:
+        return f"Don't build the password around the username: without it, it still needs {MIN_LENGTH} characters."
     return None

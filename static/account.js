@@ -18,6 +18,9 @@
   const error = $("form-error");
   const ok = $("form-ok");
   const firstTime = me.user.must_change_password;
+  const minLength = me.password_min_length || 10;
+  fresh.setAttribute("minlength", String(minLength));
+  document.querySelectorAll("[data-min-length]").forEach((n) => { n.textContent = String(minLength); });
 
   $("first-time").hidden = !firstTime;
   $("title").textContent = firstTime ? "Choose your password" : "Change your password";
@@ -35,7 +38,7 @@
     error.hidden = true;
     ok.hidden = true;
     if (!current.value) return show("Enter your current password.");
-    if (fresh.value.length < 10) return show("The new password needs at least 10 characters.");
+    if (fresh.value.length < minLength) return show(`The new password needs at least ${minLength} characters.`);
     if (fresh.value !== again.value) return show("The two new passwords are different.");
     button.disabled = true;
     try {

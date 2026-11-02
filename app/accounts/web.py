@@ -170,7 +170,7 @@ def _wait_text(seconds: int) -> str:
 
 def _me(auth: SignedIn) -> dict:
     return {"login_required": True, "user": auth.user.public(), "csrf_token": auth.session.csrf_token,
-            "permission_labels": PERMISSIONS}
+            "permission_labels": PERMISSIONS, "password_min_length": passwords.MIN_LENGTH}
 
 
 @router.post("/api/auth/login")
@@ -338,6 +338,7 @@ def list_accounts(request: Request):
         "roles": list(ROLES),
         "permission_labels": PERMISSIONS,
         "default_permissions": list(DEFAULT_PERMISSIONS),
+        "password_min_length": passwords.MIN_LENGTH,  # also the length of the passwords the page suggests
         "storage": _storage(settings),
     }
 

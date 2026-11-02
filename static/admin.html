@@ -85,9 +85,11 @@
       <div class="field">
         <label for="add-password">First password</label>
         <div class="input-row">
-          <input id="add-password" type="text" class="mono" autocomplete="off" spellcheck="false" maxlength="128" required>
+          <input id="add-password" type="text" class="mono" autocomplete="off" spellcheck="false" minlength="10" maxlength="128"
+                 aria-describedby="add-password-hint" required>
           <button type="button" class="btn btn--quiet btn--small" data-suggest="add-password">New suggestion</button>
         </div>
+        <p class="field__hint" id="add-password-hint">At least <span data-min-length>10</span> characters.</p>
       </div>
       <label class="check"><input type="checkbox" id="add-must-change" checked>
         <span>Ask them to choose their own password at first sign-in</span></label>
@@ -134,9 +136,11 @@
       <div class="field">
         <label for="reset-password">New password</label>
         <div class="input-row">
-          <input id="reset-password" type="text" class="mono" autocomplete="off" spellcheck="false" maxlength="128" required>
+          <input id="reset-password" type="text" class="mono" autocomplete="off" spellcheck="false" minlength="10" maxlength="128"
+                 aria-describedby="reset-password-hint" required>
           <button type="button" class="btn btn--quiet btn--small" data-suggest="reset-password">New suggestion</button>
         </div>
+        <p class="field__hint" id="reset-password-hint">At least <span data-min-length>10</span> characters.</p>
       </div>
       <label class="check" id="reset-must-change-row"><input type="checkbox" id="reset-must-change" checked>
         <span>Ask them to choose their own password at next sign-in</span></label>

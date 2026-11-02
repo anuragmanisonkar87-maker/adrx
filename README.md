@@ -181,7 +181,8 @@ ADMIN_PASSWORD=a-long-password-you-choose     # creates the "admin" account the 
 ```
 
 Start the app, sign in as `admin`, open **Users** and add accounts. You give each new account a first password
-(the page suggests a strong one), and its owner chooses their own at first sign-in.
+(the page suggests a random 10-character one), and its owner chooses their own at first sign-in. The same
+suggestion and the same rule apply when you set a new password for an account.
 
 **Where accounts are kept.** Without `DATABASE_URL`, accounts are kept in `data/accounts.db` (SQLite) in the
 project folder. For the website, put them in Supabase's free Postgres by setting `DATABASE_URL` to its
@@ -190,7 +191,8 @@ connection string ([deploy/README.md](deploy/README.md)). On Postgres the tables
 
 **How it's protected.**
 
-- Passwords are stored as Argon2id hashes. They need at least 10 characters, and very common ones are refused.
+- Passwords are stored as Argon2id hashes. Every password (new account, reset, or one people choose themselves)
+  needs at least 10 characters, and 10 more than the username if it contains it. Very common ones are refused.
 - A session is a random token in an HttpOnly, SameSite cookie (Secure, with the `__Host-` prefix, over HTTPS).
   Only the token's SHA-256 is stored.
 - You're signed out after 12 hours without using the site (`SESSION_IDLE_HOURS`) and after 7 days in any case

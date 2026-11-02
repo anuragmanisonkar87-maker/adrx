@@ -22,6 +22,7 @@ AD = "Mumbai's No.1 skin clinic. 100% guaranteed results!"
 # A Postgres database for tests (it is emptied!), e.g. postgresql://user:password@127.0.0.1:5432/postgres.
 # With it, every test that uses `site` also runs on Postgres, the way the app runs on Supabase.
 POSTGRES = os.getenv("TEST_DATABASE_URL")
+ROOT_STATIC = Path(__file__).resolve().parent.parent / "static"
 
 
 @dataclass
@@ -283,6 +284,26 @@ def test_admins_cannot_lock_everyone_out(site):
     store = get_store(Settings.from_env())
     with pytest.raises(LastAdmin):
         store.update_user(ops["id"], is_active=False)  # "ops" is now the only active admin
+
+
+def test_one_password_length_everywhere(site):
+    admin = browser()
+    me = sign_in(admin)
+    assert me["password_min_length"] == 10
+    assert admin.get("/api/admin/users").json()["password_min_length"] == 10
+    meera = add_user(admin, "meera", password="Ab3dEf7hJk")  # exactly 10 characters, like the page suggests
+    r = admin.post(f"/api/admin/users/{meera['id']}/password", json={"password": "Zx9cVb2nMq"})
+    assert r.status_code == 200
+    r = admin.post(f"/api/admin/users/{meera['id']}/password", json={"password": "Zx9cVb2nM"})  # 9: too short
+    assert r.status_code == 400 and r.json()["detail"] == "Use at least 10 characters."
+    r = admin.post(f"/api/admin/users/{meera['id']}/password", json={"password": "meera-2026!"})
+    assert r.status_code == 400 and "without it, it still needs 10 characters" in r.json()["detail"]
+    r = admin.post(f"/api/admin/users/{meera['id']}/password", json={"password": "meera-likes-mango-tea"})
+    assert r.status_code == 200  # the username is fine when 10 or more other characters remain
+    r = admin.post(f"/api/admin/users/{meera['id']}/password", json={"password": "Zx9cVb2nMq"})
+    sign_in(browser(), "meera", "Zx9cVb2nMq")
+    page = (ROOT_STATIC / "admin.js").read_text(encoding="utf-8")
+    assert "new Uint32Array(state.minLength)" in page and "password_min_length" in page
 
 
 def test_password_reset_and_sign_out_everywhere(site):

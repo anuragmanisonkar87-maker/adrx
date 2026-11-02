@@ -13,7 +13,7 @@
   const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
   const SHORT = { check_text: "Text", check_documents: "Documents", check_audio: "Audio", check_video: "Video", ai_review: "AI review" };
-  const state = { users: [], labels: {}, defaults: [], meId: null, editing: null };
+  const state = { users: [], labels: {}, defaults: [], meId: null, editing: null, minLength: 10 };
 
   function el(tag, attrs = {}, ...children) {
     const node = document.createElement(tag);
@@ -59,11 +59,28 @@
   }
   $$("[data-close]").forEach((b) => b.addEventListener("click", () => b.closest("dialog").close()));
 
+  // A suggested password is exactly the server's minimum length (10): easy to pass on, with small and capital
+  // letters and digits, and no look-alike characters (0/O, 1/l/I).
   function suggestPassword() {
     const alphabet = "abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-    const values = crypto.getRandomValues(new Uint32Array(12));
-    const chars = Array.from(values, (v) => alphabet[v % alphabet.length]).join("");
-    return `${chars.slice(0, 4)}-${chars.slice(4, 8)}-${chars.slice(8)}`;
+    for (;;) {
+      const values = crypto.getRandomValues(new Uint32Array(state.minLength));
+      const password = Array.from(values, (v) => alphabet[v % alphabet.length]).join("");
+      if (/[a-z]/.test(password) && /[A-Z]/.test(password) && /[2-9]/.test(password) && new Set(password).size >= 6) {
+        return password;
+      }
+    }
+  }
+
+  function applyMinLength() {
+    for (const id of ["add-password", "reset-password"]) $(`#${id}`).setAttribute("minlength", String(state.minLength));
+    $$("[data-min-length]").forEach((n) => { n.textContent = String(state.minLength); });
+  }
+
+  function tooShort(dialog, password) {
+    if (password.length >= state.minLength) return false;
+    dialogError(dialog, `Use at least ${state.minLength} characters.`);
+    return true;
   }
   $$("[data-suggest]").forEach((b) =>
     b.addEventListener("click", () => { $(`#${b.dataset.suggest}`).value = suggestPassword(); }));
@@ -158,7 +175,9 @@
   async function load() {
     try {
       const body = await send("/api/admin/users", "GET");
-      Object.assign(state, { users: body.users, labels: body.permission_labels, defaults: body.default_permissions, meId: body.me });
+      Object.assign(state, { users: body.users, labels: body.permission_labels, defaults: body.default_permissions, meId: body.me,
+        minLength: body.password_min_length || state.minLength });
+      applyMinLength();
       const notice = $("#storage-notice");
       notice.hidden = body.storage.lasting;
       notice.textContent = "Accounts are kept on this server's own disk, which Render clears on every deploy and restart, " +
@@ -195,6 +214,7 @@
       must_change_password: $("#add-must-change").checked,
     };
     if (!payload.username) return dialogError(dialog, "Enter a username.");
+    if (tooShort(dialog, payload.password)) return;
     try {
       const { user } = await send("/api/admin/users", "POST", payload);
       dialog.close();
@@ -255,6 +275,7 @@
     const u = state.editing;
     const password = $("#reset-password").value;
     const mustChange = $("#reset-must-change").checked && u.id !== state.meId;
+    if (tooShort(dialog, password)) return;
     try {
       await send(`/api/admin/users/${u.id}/password`, "POST", { password, must_change_password: mustChange });
       dialog.close();
