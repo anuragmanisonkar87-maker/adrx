@@ -308,6 +308,9 @@ def _save_upload(upload: UploadFile, settings: Settings) -> Path:
                 path.unlink(missing_ok=True)
                 raise HTTPException(413, f"File is larger than {settings.max_upload_mb} MB.")
             tmp.write(chunk)
+    # The web server kept its own temporary copy of the upload; free that space now, not after the check
+    # (a 500 MB video would otherwise take 1 GB of the server's temporary space while it is checked).
+    upload.file.close()
     if size == 0:
         path.unlink(missing_ok=True)
         raise HTTPException(400, "The uploaded file is empty.")

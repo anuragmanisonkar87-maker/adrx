@@ -8,6 +8,10 @@ name: Check the website
 
 on:
   workflow_dispatch:
+    inputs:
+      probe_upload_mb:
+        description: "Also send a file this big (MB) without signing in, to see that big uploads reach the app (0 = skip)"
+        default: "0"
 
 permissions:
   contents: read
@@ -31,7 +35,21 @@ jobs:
           print("version:", h.get("version"))
           print("sign-in required:", h.get("login_required"))
           print("speech-to-text:", h.get("transcription"), h.get("speech_service") or "(on the server)")
-          print("keeps itself awake:", h.get("keep_awake"))'
+          print("keeps itself awake:", h.get("keep_awake"))
+          print("largest file:", h.get("max_upload_mb"), "MB; audio and video checked up to", h.get("max_media_minutes"), "minutes")'
+
+      - name: Big upload reaches the app
+        if: inputs.probe_upload_mb != '0'
+        env:
+          PROBE_MB: ${{ inputs.probe_upload_mb }}
+        run: |
+          head -c $((PROBE_MB * 1024 * 1024)) /dev/zero > big.mp4
+          code=$(curl -s -o resp.txt -w '%{http_code}' --max-time 900 -F "file=@big.mp4" "$SITE_URL/api/check" || true)
+          echo "A $PROBE_MB MB upload without an account: HTTP $code $(head -c 200 resp.txt)"
+          # 401 from AdRx = the upload got through Render to the app (which asks for a sign-in);
+          # 413 or a 5xx page = something on the way refused it
+          [ "$code" = 401 ]
+          rm -f big.mp4
 
       - name: Sign in
         id: signin

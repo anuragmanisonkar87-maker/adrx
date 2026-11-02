@@ -25,8 +25,8 @@ services:
         value: "1"
       - key: QUEUE_WAIT_SECONDS
         value: "240"
-      - key: MAX_UPLOAD_MB
-        value: "30"
+      - key: MAX_UPLOAD_MB  # an upload passes through /tmp (2 GB on Render) and is deleted after the check
+        value: "500"
       - key: MAX_MEDIA_SECONDS
         value: "120"
       - key: MAX_PDF_PAGES

@@ -159,7 +159,7 @@ def test_render_blueprint_fits_the_free_plan():
     assert env["KEEP_AWAKE"] == "on"  # Render sets RENDER_EXTERNAL_URL, the address the app visits
     assert env["WHISPER_MODEL"] in ("tiny", "base") and env["PRELOAD_WHISPER"] == "1"  # fits 512 MB, baked in
     assert env["WHISPER_CPU_THREADS"] == "1" and env["WHISPER_BEAM_SIZE"] == "1"  # a tenth of a CPU
-    assert int(env["MAX_UPLOAD_MB"]) <= 50 and int(env["MAX_MEDIA_SECONDS"]) <= 180
+    assert int(env["MAX_UPLOAD_MB"]) <= 500 and int(env["MAX_MEDIA_SECONDS"]) <= 180  # /tmp is 2 GB on Render
 
 
 def test_render_asks_for_secrets_instead_of_storing_them():

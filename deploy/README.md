@@ -18,7 +18,7 @@ uploading a post, PDF, poster, voice note or video. On either option below:
 | Address | `https://adrx.onrender.com` | `https://your-name.duckdns.org` or your domain |
 | Speed | Text in a second, posters in about 15 s, a 30-second video in a minute or two | Several times faster |
 | When idle | Keeps itself awake (see below) | Always on |
-| Files | Up to 30 MB; first 2 minutes of audio/video | Up to 100 MB; first 3 minutes |
+| Files | Up to 500 MB; first 2 minutes of audio/video | Up to 100 MB; first 3 minutes |
 | Speech-to-text | Whisper "base" on the server (good English, weak Hindi); with a free Groq key, Whisper large-v3 (accurate Hindi and Hinglish) | Whisper "small" on the server |
 
 ## Option A: free on Render, with accounts in Supabase
