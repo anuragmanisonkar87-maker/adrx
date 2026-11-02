@@ -28,7 +28,7 @@
     return me;
   }
 
-  async function api(url, options = {}) {
+  async function api(url, options = {}, retried = false) {
     const headers = new Headers(options.headers || {});
     if (me && me.csrf_token) headers.set("X-CSRF-Token", me.csrf_token);
     if (!headers.has("Accept")) headers.set("Accept", "application/json");
@@ -40,6 +40,21 @@
         if (body.code === "password_change") {
           location.assign("/account");
           return never();
+        }
+        if (body.code === "csrf" && !retried) {
+          // This page was opened under an earlier sign-in (for example, someone signed in again in another tab).
+          // Take the browser's current session and try once more; a different account reloads the page instead.
+          const previousUser = me.user && me.user.id;
+          const fresh = await fetch("/api/auth/me", { headers: { Accept: "application/json" }, credentials: "same-origin" });
+          if (fresh.status === 401) return toSignIn();
+          if (fresh.ok) {
+            me = await fresh.json();
+            if (!me.user || me.user.id !== previousUser) {
+              location.reload();
+              return never();
+            }
+            return api(url, options, true);
+          }
         }
       }
     }
