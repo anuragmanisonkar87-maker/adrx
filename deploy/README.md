@@ -1,12 +1,15 @@
 # Put AdRx online as a website
 
-The tool can run as a public website where anyone can check an ad by pasting text or uploading a post, PDF,
-poster, voice note or video. On either option below:
+The tool can run as a website where the people you give an account can check an ad by pasting text or
+uploading a post, PDF, poster, voice note or video. On either option below:
 
+- **Sign-in.** Every check needs an account. You add accounts on the site's **Users** page and choose what
+  each one may check (see "Sign-in and user accounts" in the main README).
 - **Quick check only.** The phrase rules run on every check, and AI review is switched off, so it never costs
   you Anthropic credits.
-- **Visitor limits.** Each visitor (IP address) gets 20 checks an hour and 60 a day.
-- **Privacy.** Uploaded files are deleted as soon as the check is done, and nothing is stored.
+- **Limits.** Each account gets 20 checks an hour and 60 a day.
+- **Privacy.** Uploaded files are deleted as soon as the check is done. Only the accounts and a log of
+  sign-ins and changes are kept.
 - **HTTPS.** Both options give the site a secure address for free.
 
 | | Free on Render | Your own server |
@@ -18,17 +21,39 @@ poster, voice note or video. On either option below:
 | Files | Up to 30 MB; first 2 minutes of audio/video | Up to 100 MB; first 3 minutes |
 | Speech-to-text | Whisper "base" on the server (good English, weak Hindi); with a free Groq key, Whisper large-v3 (accurate Hindi and Hinglish) | Whisper "small" on the server |
 
-## Option A: free on Render
+## Option A: free on Render, with accounts in Supabase
 
 Render (https://render.com) runs the app for free from your GitHub repository, using `render.yaml` in this
-project.
+project. The accounts are kept in a free Supabase database (https://supabase.com), because Render's free plan
+starts the server with an empty disk at every deploy and restart.
 
-1. **Create the site.** Sign in at https://dashboard.render.com with GitHub. Click **New**, then **Blueprint**,
-   and connect your GitHub account if asked. Choose the repository with this project.
-2. Render reads `render.yaml` and asks for **OPENAI_API_KEY**. Leave it empty, or paste a free Groq key (see
-   below), then click **Deploy Blueprint**.
-3. The first build takes about 10 minutes. Then open the address Render shows, for example
-   `https://adrx.onrender.com`.
+1. **Create the database.** Sign in at https://supabase.com/dashboard and click **New project**. Name it
+   `adrx`, click **Generate a password** and keep the password somewhere safe, choose the region
+   **Southeast Asia (Singapore)** (where the Render site runs), and click **Create new project**.
+2. **Copy its address.** When the project is ready, click **Connect** at the top of the project page. Under
+   **Session pooler**, copy the connection string. It looks like
+   `postgresql://postgres.abcdefgh:[YOUR-PASSWORD]@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres`.
+   Put the database password in place of `[YOUR-PASSWORD]`, without the brackets. Use the session pooler, not
+   the direct connection, which Render can't reach.
+3. **Create the site.** Sign in at https://dashboard.render.com with GitHub. Click **New**, then **Blueprint**,
+   and connect your GitHub account if asked. Choose the repository with this project. Render reads
+   `render.yaml` and asks for these values:
+   - **ADMIN_PASSWORD**: the first password of the `admin` account, at least 10 characters.
+   - **DATABASE_URL**: the connection string from step 2.
+   - **OPENAI_API_KEY**: leave it empty, or paste a free Groq key (see below).
+
+   Then click **Deploy Blueprint**.
+4. The first build takes about 10 minutes. Then open the address Render shows, for example
+   `https://adrx.onrender.com`. Sign in as `admin`, and add accounts on the **Users** page.
+
+If the site was created before sign-in existed, add `ADMIN_PASSWORD` and `DATABASE_URL` on the service's
+**Environment** page instead: click **Edit**, then **Add variable** for each one, then **Save, rebuild, and
+deploy**.
+
+The tables go into their own schema, `adrx`, which Supabase's public Data API doesn't publish, and row-level
+security is switched on for them as well. Supabase pauses a free project after about a week with little use.
+The site runs a small clean-up in the database a few times a day, which should keep it active. If the project
+is paused anyway, sign-in stops working until you open it in Supabase and click **Resume project**.
 
 Every change pushed to the repository then redeploys the site by itself, because Render's GitHub app tells
 Render about each push. If you created the site from a public repository address instead, Render can't see
@@ -36,7 +61,10 @@ your pushes. To fix that, open the service's **Settings**, click **Edit** next t
 under **Git Provider**, let Render use the repository on GitHub, then choose the repository and save.
 
 To try the live site with the sample files, open the repository's **Actions** tab, choose **Check the
-website** and click **Run workflow**.
+website** and click **Run workflow**. With sign-in on, it checks that the site refuses visitors without an
+account. To have it check the sample files too, add an account for it (it needs text, documents, audio and
+video; untick "Ask them to choose their own password"). Then save the username and password as the repository
+secrets `ADRX_USERNAME` and `ADRX_PASSWORD` (GitHub: Settings > Secrets and variables > Actions).
 
 **Speech-to-text.** Without a key, voice notes and spoken words in videos are turned into text by the small
 Whisper "base" model on the server: good for clear English, weak for Hindi and Hinglish. For accurate Hindi
@@ -65,7 +93,9 @@ fall asleep. If Render gave the site a different address, add a repository varia
 
 This option uses the files in this folder: Docker, Caddy for HTTPS and a one-command setup script. Files can be
 up to 100 MB, and only the first 3 minutes of audio or video are checked. Two files are processed at a time,
-and others wait their turn. You only pay for the server.
+and others wait their turn. You only pay for the server. The accounts are kept on the server, in the app's
+data volume, which survives updates. To keep them in Supabase instead, put its connection string in
+`DATABASE_URL` in `deploy/.env` (see Option A, steps 1 and 2).
 
 ## 1. Rent a small server (about 10 minutes)
 
@@ -113,9 +143,13 @@ the HTTPS certificate. It ends with:
 
 ```text
 AdRx is online: https://adrx-check.duckdns.org
+Sign in as: admin
+Password:   (a random password)
 ```
 
-Open that address in your browser and share it.
+Open that address, sign in as `admin` with that password, and change it on the **Password** page. Then add
+accounts for your colleagues on the **Users** page. The first password is also saved in `deploy/.env`
+(`ADMIN_PASSWORD`).
 
 ## Update to a new version
 
@@ -135,7 +169,8 @@ The settings are in `/opt/nmc-compliance-checker/deploy/.env`. You can open it w
 
 | Setting | Default | What it does |
 | --- | --- | --- |
-| `RATE_LIMIT_PER_HOUR`, `RATE_LIMIT_PER_DAY` | 20, 60 | Checks per visitor. |
+| `RATE_LIMIT_PER_HOUR`, `RATE_LIMIT_PER_DAY` | 20, 60 | Checks per account. |
+| `REQUIRE_LOGIN` | on | Every check needs an account. `off` opens the site to anyone with the link. |
 | `MAX_UPLOAD_MB` | 100 | Largest file. If you change it, keep `PROXY_MAX_BODY` a little higher. |
 | `MAX_MEDIA_SECONDS` | 180 | How much of each recording is checked. |
 | `MAX_PARALLEL_CHECKS` | 2 | Files processed at the same time. Use 1 on a 2 GB server. |
@@ -175,9 +210,10 @@ sudo bash /opt/nmc-compliance-checker/deploy/setup-server.sh check.yourclinic.in
 
 ## Good to know
 
-- **Why AI review is off:** on a public website, every visitor's check would be billed to your Anthropic key.
-  Turn it on (`AI_REVIEW=on` plus `ANTHROPIC_API_KEY=` in `deploy/.env`) only if you add your own way to
-  control who uses it.
+- **Why AI review is off:** every AI check is billed to your Anthropic key. To offer it, set `AI_REVIEW=on` and
+  `ANTHROPIC_API_KEY=` in `deploy/.env`, then tick **AI review** only for the accounts that should have it.
+- **Forgot the admin password:** run
+  `cd /opt/nmc-compliance-checker/deploy && sudo docker compose exec app python -m app.accounts reset-password admin`.
 - **Memory:** on a 2 GB server, the setup adds 2 GB of swap, so the speech model fits. Checks are slower
   there than on a 4 GB server.
 - **Restarts:** the site starts again by itself after a server restart.

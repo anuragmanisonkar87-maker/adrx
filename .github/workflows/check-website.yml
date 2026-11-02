@@ -1,4 +1,9 @@
 # Checks the live website with real sample files. Run it from the Actions tab (Check the website > Run workflow).
+#
+# With sign-in on, it first makes sure a check without an account is refused. To also check the sample files,
+# add an account for it on the site's Users page (allowed: text, documents, audio and video; untick "Ask them to
+# choose their own password") and save its username and password as the repository secrets ADRX_USERNAME and
+# ADRX_PASSWORD (Settings > Secrets and variables > Actions > New repository secret).
 name: Check the website
 
 on:
@@ -19,15 +24,50 @@ jobs:
 
       - name: Wake the site
         run: |
-          curl -fsS --retry 8 --retry-delay 15 --retry-all-errors --max-time 120 "$SITE_URL/api/health" | python3 -c '
-          import json, sys
-          h = json.load(sys.stdin)
+          curl -fsS --retry 8 --retry-delay 15 --retry-all-errors --max-time 120 "$SITE_URL/api/health" > health.json
+          python3 -c '
+          import json
+          h = json.load(open("health.json"))
           print("version:", h.get("version"))
+          print("sign-in required:", h.get("login_required"))
           print("speech-to-text:", h.get("transcription"), h.get("speech_service") or "(on the server)")
           print("keeps itself awake:", h.get("keep_awake"))'
 
-      - name: Check samples
+      - name: Sign in
+        id: signin
+        env:
+          ADRX_USERNAME: ${{ secrets.ADRX_USERNAME }}
+          ADRX_PASSWORD: ${{ secrets.ADRX_PASSWORD }}
         run: |
+          required=$(python3 -c 'import json; print(json.load(open("health.json")).get("login_required"))')
+          if [ "$required" != "True" ]; then
+            echo "Sign-in is off on this site."
+            exit 0
+          fi
+          code=$(curl -s -o /dev/null -w '%{http_code}' -F text=test "$SITE_URL/api/check")
+          echo "A check without an account: HTTP $code (401 = refused, as it should be)"
+          [ "$code" = 401 ] || exit 1
+          if [ -z "$ADRX_USERNAME" ] || [ -z "$ADRX_PASSWORD" ]; then
+            echo "::notice::To check the sample files too, add the repository secrets ADRX_USERNAME and ADRX_PASSWORD."
+            echo "skip=1" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          python3 -c 'import json, os; print(json.dumps({"username": os.environ["ADRX_USERNAME"], "password": os.environ["ADRX_PASSWORD"]}))' \
+            | curl -sS -c cookies.txt -H "Content-Type: application/json" --data @- -o login.json -w '%{http_code}' \
+                "$SITE_URL/api/auth/login" > status.txt
+          if [ "$(cat status.txt)" != 200 ]; then
+            echo "Sign-in failed (HTTP $(cat status.txt)): $(cat login.json)"
+            exit 1
+          fi
+          echo "Signed in as $ADRX_USERNAME"
+
+      - name: Check samples
+        if: steps.signin.outputs.skip != '1'
+        run: |
+          auth=()
+          if [ -f login.json ]; then
+            auth=(-b cookies.txt -H "X-CSRF-Token: $(python3 -c 'import json; print(json.load(open("login.json"))["csrf_token"])')")
+          fi
           show() {
             python3 -c '
           import json, sys
@@ -42,7 +82,8 @@ jobs:
           check() {  # file, spoken language, who publishes it
             echo
             echo "=== $1 (language: $2)"
-            curl -sS --max-time 900 -F "file=@samples/$1" -F "language=$2" -F "publisher=$3" "$SITE_URL/api/check" | show
+            curl -sS --max-time 900 "${auth[@]}" -F "file=@samples/$1" -F "language=$2" -F "publisher=$3" \
+              "$SITE_URL/api/check" | show
           }
           check voice_note_2_english_not_compliant.ogg auto rmp
           check voice_note_1_hinglish_not_compliant.ogg hi rmp

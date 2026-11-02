@@ -4,10 +4,11 @@ from __future__ import annotations
 
 import os
 import shutil
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
-ENV_FILE = Path(__file__).resolve().parent.parent / ".env"
+PROJECT_DIR = Path(__file__).resolve().parent.parent
+ENV_FILE = PROJECT_DIR / ".env"
 
 try:  # load the project's .env file; its values win over variables already set in your shell
     from dotenv import load_dotenv
@@ -31,6 +32,12 @@ def _bool(name: str, default: bool) -> bool:
     return value in ("1", "true", "yes", "on")
 
 
+def _path(name: str, default: Path) -> Path:
+    value = (os.getenv(name) or "").strip()
+    path = Path(value).expanduser() if value else default
+    return path if path.is_absolute() else PROJECT_DIR / path
+
+
 def _site_address() -> str | None:
     """The website's public address, for KEEP_AWAKE. Render sets RENDER_EXTERNAL_URL by itself."""
     value = (os.getenv("KEEP_AWAKE_URL") or os.getenv("RENDER_EXTERNAL_URL") or "").strip().rstrip("/")
@@ -42,7 +49,7 @@ def _site_address() -> str | None:
 @dataclass(frozen=True)
 class Settings:
     # AI review (Claude). Without a key the tool runs in "quick check" (rules-only) mode.
-    anthropic_api_key: str | None
+    anthropic_api_key: str | None = field(repr=False)
     anthropic_workspace_id: str | None  # only for keys that are not scoped to a workspace
     anthropic_base_url: str  # pinned so a stray ANTHROPIC_BASE_URL in the shell is never used
     claude_model: str
@@ -58,7 +65,7 @@ class Settings:
     whisper_compute_type: str  # int8 on CPU, float16 on GPU
     whisper_cpu_threads: int  # 0 = faster-whisper's default (4); 1 on a small server
     whisper_beam_size: int  # 5 = most accurate; 1 = several times faster
-    openai_api_key: str | None  # for TRANSCRIBE_BACKEND=openai (OpenAI, Groq or any compatible API)
+    openai_api_key: str | None = field(repr=False)  # for TRANSCRIBE_BACKEND=openai (OpenAI, Groq or any compatible API)
     openai_base_url: str
     openai_transcribe_model: str
 
@@ -84,6 +91,16 @@ class Settings:
     keep_awake: bool  # the app opens its own address every few minutes (free hosts sleep after 15 idle minutes)
     keep_awake_url: str | None  # the site's public address (KEEP_AWAKE_URL, else Render's RENDER_EXTERNAL_URL)
     keep_awake_minutes: int  # 1-14, so a visit always comes before Render's 15 idle minutes are up
+
+    # Sign-in and user accounts (README "Sign-in and user accounts")
+    require_login: bool  # REQUIRE_LOGIN=on: every page and every check needs an account
+    database_url: str | None = field(repr=False)  # Supabase or other Postgres; empty = SQLite file in DATA_DIR
+    data_dir: Path  # where the SQLite accounts file lives when DATABASE_URL is empty
+    admin_username: str
+    admin_password: str | None = field(repr=False)  # creates the first admin account when it doesn't exist
+    admin_password_reset: bool  # ADMIN_PASSWORD_RESET=on: at start-up, set the admin's password to ADMIN_PASSWORD
+    session_idle_hours: int  # signed out after this long without using the site
+    session_max_days: int  # and after this long in any case
 
     @property
     def ai_enabled(self) -> bool:
@@ -138,4 +155,12 @@ class Settings:
             keep_awake=_bool("KEEP_AWAKE", False),
             keep_awake_url=_site_address(),
             keep_awake_minutes=min(max(_int("KEEP_AWAKE_MINUTES", 10), 1), 14),
+            require_login=_bool("REQUIRE_LOGIN", False),
+            database_url=(os.getenv("DATABASE_URL") or "").strip() or None,
+            data_dir=_path("DATA_DIR", PROJECT_DIR / "data"),
+            admin_username=(os.getenv("ADMIN_USERNAME") or "admin").strip().lower(),
+            admin_password=os.getenv("ADMIN_PASSWORD") or None,
+            admin_password_reset=_bool("ADMIN_PASSWORD_RESET", False),
+            session_idle_hours=min(max(_int("SESSION_IDLE_HOURS", 12), 1), 24 * 30),
+            session_max_days=min(max(_int("SESSION_MAX_DAYS", 7), 1), 90),
         )

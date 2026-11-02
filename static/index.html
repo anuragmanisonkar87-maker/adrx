@@ -18,6 +18,7 @@
         <span class="brand__tag">NMC ad compliance check</span>
       </a>
       <span class="topbar__ref" id="guideline-ref">NMC Guidelines on Ethical Advertising, 06 Oct 2026</span>
+      <nav class="account" id="account-menu" aria-label="Account" hidden></nav>
     </div>
   </header>
 
@@ -37,6 +38,7 @@
 
         <div id="panel-text" role="tabpanel" aria-labelledby="tab-text" class="panel">
           <label for="text-input" class="sr-only">Content to check</label>
+          <p class="notice" id="text-locked" hidden>Your account can't check pasted text. Ask your admin if you need it.</p>
           <textarea id="text-input" name="text" rows="8" placeholder="Paste the caption, post, video script, brochure text or website copy..."></textarea>
           <div class="examples">
             <span>Try an example:</span>
@@ -47,6 +49,7 @@
         </div>
 
         <div id="panel-file" role="tabpanel" aria-labelledby="tab-file" class="panel" hidden>
+          <p class="notice" id="file-locked" hidden></p>
           <label id="dropzone" class="dropzone" for="file-input">
             <input id="file-input" name="file" type="file" class="sr-only">
             <span class="dropzone__icon" aria-hidden="true">
@@ -159,6 +162,7 @@
     </div>
   </template>
 
+  <script src="/static/session.js"></script>
   <script src="/static/app.js"></script>
 </body>
 </html>

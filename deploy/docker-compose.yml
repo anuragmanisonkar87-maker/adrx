@@ -11,6 +11,9 @@ services:
     env_file: .env
     environment:
       FORWARDED_ALLOW_IPS: "*"  # Caddy passes on each visitor's IP address, used for the visitor limits
+      DATA_DIR: /app/data
+    volumes:
+      - accounts:/app/data  # the accounts file (unless DATABASE_URL points to Supabase or another Postgres)
     expose:
       - "8000"
     restart: unless-stopped
@@ -39,5 +42,6 @@ services:
     logging: *logs
 
 volumes:
+  accounts:
   caddy_data:
   caddy_config:

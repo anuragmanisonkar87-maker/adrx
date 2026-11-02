@@ -16,7 +16,8 @@ RUN pip install -r requirements.txt
 
 COPY app ./app
 COPY static ./static
-RUN chown -R app:app /app
+# data/: the accounts file when DATABASE_URL is not set (deploy/docker-compose.yml keeps it in a volume)
+RUN mkdir -p /app/data && chown -R app:app /app
 USER app
 
 # Optional: bake the Whisper model into the image so the first audio/video check is not slow.

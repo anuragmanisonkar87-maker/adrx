@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Users and access - AdRx</title>
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/fonts/fonts.css">
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="wrap topbar__inner">
+      <a class="brand" href="/" aria-label="AdRx home">
+        <span class="brand__mark" aria-hidden="true">℞</span>
+        <span class="brand__name">AdRx</span>
+        <span class="brand__tag">NMC ad compliance check</span>
+      </a>
+      <nav class="account" id="account-menu" aria-label="Account" hidden></nav>
+    </div>
+  </header>
+
+  <main class="wrap admin">
+    <div class="page-head">
+      <div>
+        <h1>Users and access</h1>
+        <p class="page-head__lede">Add accounts, choose what each one may check, and switch accounts off when
+          they're no longer needed.</p>
+      </div>
+      <button type="button" class="btn btn--primary" id="add-user-btn">Add a user</button>
+    </div>
+    <p class="notice" id="storage-notice" role="status" hidden></p>
+    <p class="form-error" id="page-error" role="alert" hidden></p>
+
+    <section class="card" aria-labelledby="users-heading">
+      <h2 class="sr-only" id="users-heading">Accounts</h2>
+      <table class="users">
+        <thead>
+          <tr>
+            <th scope="col">Name</th>
+            <th scope="col">Role</th>
+            <th scope="col">Can check</th>
+            <th scope="col">Status</th>
+            <th scope="col">Last sign-in</th>
+            <th scope="col"><span class="sr-only">Actions</span></th>
+          </tr>
+        </thead>
+        <tbody id="users-body"></tbody>
+      </table>
+    </section>
+
+    <section class="activity" aria-labelledby="activity-heading">
+      <h2 id="activity-heading">Recent activity</h2>
+      <ol class="activity__list" id="activity-list"></ol>
+    </section>
+  </main>
+
+  <dialog class="modal" id="add-dialog" aria-labelledby="add-title">
+    <form id="add-form" class="modal__form" novalidate>
+      <h2 id="add-title">Add a user</h2>
+      <div class="field">
+        <label for="add-username">Username</label>
+        <input id="add-username" type="text" autocapitalize="none" spellcheck="false" maxlength="32" autocomplete="off"
+               aria-describedby="add-username-hint" required>
+        <p class="field__hint" id="add-username-hint">For signing in: 3 to 32 small letters, digits, dots, dashes or
+          underscores, for example <span class="mono">priya.shah</span>.</p>
+      </div>
+      <div class="field">
+        <label for="add-name">Full name <span class="muted">(optional)</span></label>
+        <input id="add-name" type="text" maxlength="80" autocomplete="off">
+      </div>
+      <fieldset class="field">
+        <legend>Role</legend>
+        <div class="chips">
+          <label class="chip"><input type="radio" name="add-role" value="user" checked><span>User</span></label>
+          <label class="chip"><input type="radio" name="add-role" value="admin"><span>Admin</span></label>
+        </div>
+      </fieldset>
+      <fieldset class="field" data-perms-box>
+        <legend>Can check</legend>
+        <div class="checks" data-perms></div>
+        <p class="field__hint" data-admin-hint hidden>Admins can use everything and manage accounts.</p>
+      </fieldset>
+      <div class="field">
+        <label for="add-password">First password</label>
+        <div class="input-row">
+          <input id="add-password" type="text" class="mono" autocomplete="off" spellcheck="false" maxlength="128" required>
+          <button type="button" class="btn btn--quiet btn--small" data-suggest="add-password">New suggestion</button>
+        </div>
+      </div>
+      <label class="check"><input type="checkbox" id="add-must-change" checked>
+        <span>Ask them to choose their own password at first sign-in</span></label>
+      <p class="form-error" data-error role="alert" hidden></p>
+      <div class="modal__actions">
+        <button type="submit" class="btn btn--primary">Create account</button>
+        <button type="button" class="btn btn--quiet" data-close>Cancel</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog class="modal" id="edit-dialog" aria-labelledby="edit-title">
+    <form id="edit-form" class="modal__form" novalidate>
+      <h2 id="edit-title">Edit account</h2>
+      <div class="field">
+        <label for="edit-name">Full name</label>
+        <input id="edit-name" type="text" maxlength="80" autocomplete="off">
+      </div>
+      <fieldset class="field">
+        <legend>Role</legend>
+        <div class="chips">
+          <label class="chip"><input type="radio" name="edit-role" value="user"><span>User</span></label>
+          <label class="chip"><input type="radio" name="edit-role" value="admin"><span>Admin</span></label>
+        </div>
+        <p class="field__hint" data-self-hint hidden>You can't change your own role. Another admin can.</p>
+      </fieldset>
+      <fieldset class="field" data-perms-box>
+        <legend>Can check</legend>
+        <div class="checks" data-perms></div>
+        <p class="field__hint" data-admin-hint hidden>Admins can use everything and manage accounts.</p>
+      </fieldset>
+      <p class="form-error" data-error role="alert" hidden></p>
+      <div class="modal__actions">
+        <button type="submit" class="btn btn--primary">Save changes</button>
+        <button type="button" class="btn btn--quiet" data-close>Cancel</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog class="modal" id="password-dialog" aria-labelledby="password-title">
+    <form id="password-form" class="modal__form" novalidate>
+      <h2 id="password-title">New password</h2>
+      <p class="modal__lede" id="password-lede">The account is signed out everywhere. Give the new password to its owner.</p>
+      <div class="field">
+        <label for="reset-password">New password</label>
+        <div class="input-row">
+          <input id="reset-password" type="text" class="mono" autocomplete="off" spellcheck="false" maxlength="128" required>
+          <button type="button" class="btn btn--quiet btn--small" data-suggest="reset-password">New suggestion</button>
+        </div>
+      </div>
+      <label class="check" id="reset-must-change-row"><input type="checkbox" id="reset-must-change" checked>
+        <span>Ask them to choose their own password at next sign-in</span></label>
+      <p class="form-error" data-error role="alert" hidden></p>
+      <div class="modal__actions">
+        <button type="submit" class="btn btn--primary">Set password</button>
+        <button type="button" class="btn btn--quiet" data-close>Cancel</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog class="modal" id="confirm-dialog" aria-labelledby="confirm-title">
+    <form id="confirm-form" class="modal__form" novalidate>
+      <h2 id="confirm-title"></h2>
+      <p class="modal__lede" id="confirm-text"></p>
+      <p class="form-error" data-error role="alert" hidden></p>
+      <div class="modal__actions">
+        <button type="submit" class="btn btn--danger" id="confirm-ok"></button>
+        <button type="button" class="btn btn--quiet" data-close>Cancel</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog class="modal" id="details-dialog" aria-labelledby="details-title">
+    <div class="modal__form">
+      <h2 id="details-title"></h2>
+      <p class="modal__lede" id="details-text"></p>
+      <dl class="credentials">
+        <dt>Website</dt><dd id="details-site"></dd>
+        <dt>Username</dt><dd id="details-username"></dd>
+        <dt>Password</dt><dd id="details-password" class="mono"></dd>
+      </dl>
+      <p class="field__hint">Share the password privately, for example in person or by phone, not in a group chat.</p>
+      <div class="modal__actions">
+        <button type="button" class="btn btn--primary" id="details-copy">Copy sign-in details</button>
+        <button type="button" class="btn btn--quiet" data-close>Done</button>
+      </div>
+    </div>
+  </dialog>
+
+  <script src="/static/session.js"></script>
+  <script src="/static/admin.js"></script>
+</body>
+</html>

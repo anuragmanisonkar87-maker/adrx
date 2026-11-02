@@ -24,12 +24,18 @@ def _no_real_ai(monkeypatch):
     for name in ("PUBLIC_SITE", "AI_REVIEW", "RATE_LIMIT_PER_HOUR", "RATE_LIMIT_PER_DAY", "MAX_PARALLEL_CHECKS",
                  "QUEUE_WAIT_SECONDS", "OCR_FRAME_SIDE", "OCR_FRAME_WORKERS", "TRANSCRIBE_BACKEND", "OPENAI_API_KEY",
                  "OPENAI_BASE_URL", "OPENAI_TRANSCRIBE_MODEL", "WHISPER_CPU_THREADS", "WHISPER_BEAM_SIZE",
-                 "KEEP_AWAKE", "KEEP_AWAKE_URL", "KEEP_AWAKE_MINUTES", "RENDER_EXTERNAL_URL"):
+                 "KEEP_AWAKE", "KEEP_AWAKE_URL", "KEEP_AWAKE_MINUTES", "RENDER_EXTERNAL_URL", "RENDER",
+                 "REQUIRE_LOGIN", "DATABASE_URL", "DATA_DIR", "ADMIN_USERNAME", "ADMIN_PASSWORD",
+                 "ADMIN_PASSWORD_RESET", "SESSION_IDLE_HOURS", "SESSION_MAX_DAYS"):
         monkeypatch.delenv(name, raising=False)
+    from app.accounts import reset_stores
+    from app.accounts.security import sign_in_limits
     from app.main import visitor_limits
 
     visitor_limits.reset()
+    sign_in_limits.reset()
     yield
+    reset_stores()
 
 
 @pytest.fixture

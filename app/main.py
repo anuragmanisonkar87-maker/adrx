@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import bisect
+import dataclasses
 import hashlib
 import logging
 import os
@@ -19,7 +20,8 @@ from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 
-from app import __version__, extract, keep_awake
+from app import __version__, accounts, extract, keep_awake
+from app.accounts import web as accounts_web
 from app.config import Settings
 from app.engine import ai_review
 from app.engine.checker import NothingToCheck, run_check
@@ -59,9 +61,19 @@ LANGUAGES = {"auto": None, "en": "en", "hi": "hi"}
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    keep_awake.start(Settings.from_env())  # only with KEEP_AWAKE=on (the free website on Render)
+    settings = Settings.from_env()
+    keep_awake.start(settings)  # only with KEEP_AWAKE=on (the free website on Render)
+    housekeeping = None
+    if settings.require_login:
+        try:
+            accounts.bootstrap(settings)  # tables, and the first admin account from ADMIN_PASSWORD
+        except accounts.AccountsUnavailable as exc:
+            log.error("Sign-in is on, but the accounts aren't ready (%s) Trying again at the next sign-in.", exc)
+        housekeeping = accounts.Housekeeping(settings).start()
     yield
     keep_awake.stop()
+    if housekeeping:
+        housekeeping.stop()
 
 
 app = FastAPI(
@@ -71,6 +83,10 @@ app = FastAPI(
     lifespan=lifespan,
 )
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+app.include_router(accounts_web.router)
+app.add_exception_handler(accounts.AccountsUnavailable, accounts_web.unavailable_handler)
+# With REQUIRE_LOGIN=on, every page and API needs a signed-in account (the innermost check, after those below)
+app.middleware("http")(accounts_web.gate)
 
 
 @app.middleware("http")
@@ -100,6 +116,29 @@ async def public_site_pages(request: Request, call_next):
     if request.url.path in API_DOC_PATHS and Settings.from_env().public_site:
         return JSONResponse(status_code=404, content={"detail": "Not Found"})
     return await call_next(request)
+
+
+# The pages load scripts, styles and fonts only from this site and can't be shown inside other sites' frames.
+CONTENT_SECURITY_POLICY = ("default-src 'self'; img-src 'self' data: blob:; object-src 'none'; base-uri 'self'; "
+                           "form-action 'self'; frame-ancestors 'none'")
+
+
+@app.middleware("http")
+async def security_headers(request: Request, call_next):
+    response = await call_next(request)
+    path = request.url.path
+    headers = response.headers
+    headers.setdefault("X-Content-Type-Options", "nosniff")
+    headers.setdefault("Referrer-Policy", "same-origin")
+    headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+    if path not in API_DOC_PATHS:  # the /docs page loads its scripts from a CDN
+        headers.setdefault("Content-Security-Policy", CONTENT_SECURITY_POLICY)
+        headers.setdefault("X-Frame-Options", "DENY")
+    if request.url.scheme == "https":
+        headers.setdefault("Strict-Transport-Security", "max-age=31536000")
+    if not path.startswith("/static/"):
+        headers.setdefault("Cache-Control", "no-store")  # pages and answers that belong to a signed-in account
+    return response
 
 
 class VisitorLimits:
@@ -145,15 +184,36 @@ def _wait_text(seconds: int) -> str:
     return f"in about {round(minutes / 60)} hours"
 
 
-def _count_visit(request: Request, settings: Settings) -> None:
+def _count_visit(request: Request, settings: Settings, user: accounts.User | None = None) -> None:
     if settings.rate_limit_per_hour <= 0 and settings.rate_limit_per_day <= 0:
         return
-    visitor = request.client.host if request.client else "unknown"
+    # a signed-in account has its own limits, so colleagues behind one office address don't share them
+    visitor = f"user:{user.id}" if user else (request.client.host if request.client else "unknown")
     wait = visitor_limits.take(visitor, settings.rate_limit_per_hour, settings.rate_limit_per_day)
     if wait is not None:
         log.info("Visitor limit reached for %s", visitor)
         raise HTTPException(429, f"You've reached the number of checks allowed for now. Please try again "
                                  f"{_wait_text(wait)}.", headers={"Retry-After": str(wait)})
+
+
+def _require(user: accounts.User | None, permission: str) -> None:
+    """With sign-in on, each check needs the matching permission (pasted text, documents, audio or video)."""
+    if user is not None and not user.can(permission):
+        what = accounts.KIND_WORDS.get(permission, "this")
+        raise HTTPException(403, f"Your account can't check {what}. Ask your admin for access.")
+
+
+def _file_permission(path: Path, filename: str, content_type: str | None, settings: Settings) -> str:
+    kind = extract.detect_kind(filename, path, content_type, settings)
+    if kind == "video" and settings.ffmpeg_available:
+        from app.extract import media
+
+        try:
+            if not media.probe(path).has_video:
+                kind = "audio"  # e.g. a voice note saved as .mp4 or .webm
+        except Exception:  # the reader reports unreadable files itself
+            pass
+    return accounts.KIND_PERMISSION.get(kind, "check_documents")
 
 
 @contextmanager
@@ -225,6 +285,7 @@ def health(verify_ai: bool = False) -> dict:
         "speech_service": (urlparse(s.openai_base_url).hostname
                            if s.speech_backend == "openai" and s.openai_api_key else None),
         "keep_awake": keep_awake.running(),
+        "login_required": s.require_login,
         "guideline": guideline_reference(),
     }
     if verify_ai:
@@ -267,12 +328,17 @@ def check(
     started = time.monotonic()
     caption = (text or "").strip()
     filename = file.filename if file is not None and file.filename else None
-    if filename or caption:
-        _count_visit(request, settings)
+    auth = accounts_web.signed_in(request)  # None unless sign-in is on (REQUIRE_LOGIN)
+    user = auth.user if auth else None
+    if user is not None and not user.can("ai_review"):
+        settings = dataclasses.replace(settings, ai_review=False)  # this account gets the phrase rules only
 
     if filename:
         path = _save_upload(file, settings)
         try:
+            if user is not None:
+                _require(user, _file_permission(path, filename, file.content_type, settings))
+            _count_visit(request, settings, user)
             with _file_check_slot(settings):
                 extraction = extract.from_file(path, filename, settings, file.content_type,
                                                LANGUAGES.get(language, None))
@@ -286,6 +352,8 @@ def check(
             extraction.text = f"[Post text / caption]\n{caption_text}\n\n[Text from the file]\n{body}"
             extraction.how.insert(0, "caption text")
     elif caption:
+        _require(user, "check_text")
+        _count_visit(request, settings, user)
         extraction = extract.from_text(caption, settings)
     else:
         raise HTTPException(400, "Paste some text or upload a file to check.")

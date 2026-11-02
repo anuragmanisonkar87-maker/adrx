@@ -57,6 +57,17 @@ if [ -n "$ADDRESS" ]; then
     echo "SITE_ADDRESS=$ADDRESS" >> .env
   fi
 fi
+NEW_ADMIN_PASSWORD=""
+if grep -qiE '^REQUIRE_LOGIN=(on|true|yes|1)' .env && ! grep -qE '^ADMIN_PASSWORD=.+' .env; then
+  NEW_ADMIN_PASSWORD="$(python3 -c 'import secrets; print(secrets.token_urlsafe(15))')"
+  if grep -q '^ADMIN_PASSWORD=' .env; then
+    sed -i "s|^ADMIN_PASSWORD=.*|ADMIN_PASSWORD=$NEW_ADMIN_PASSWORD|" .env
+  else
+    echo "ADMIN_PASSWORD=$NEW_ADMIN_PASSWORD" >> .env
+  fi
+  echo "Created a password for the admin account (saved in deploy/.env)"
+fi
+chmod 600 .env  # it holds passwords
 SITE="$( (grep -E '^SITE_ADDRESS=' .env || true) | tail -n 1 | cut -d= -f2- | tr -d '[:space:]')"
 SITE="${SITE:-:80}"
 SERVER_IP="$(curl -4 -fsS --max-time 10 https://api.ipify.org 2>/dev/null || hostname -I | awk '{print $1}')"
@@ -94,6 +105,11 @@ echo "Waiting for $URL to answer..."
 for _ in $(seq 1 60); do
   if curl -fsS --max-time 10 "$URL/api/health" >/dev/null 2>&1; then
     step "AdRx is online: $URL"
+    if [ -n "$NEW_ADMIN_PASSWORD" ]; then
+      echo "Sign in as: admin"
+      echo "Password:   $NEW_ADMIN_PASSWORD"
+      echo "(It is also in deploy/.env. Change it on the site's Password page, then add accounts on the Users page.)"
+    fi
     exit 0
   fi
   sleep 5

@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sign in - AdRx</title>
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/fonts/fonts.css">
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="wrap topbar__inner">
+      <a class="brand" href="/" aria-label="AdRx home">
+        <span class="brand__mark" aria-hidden="true">℞</span>
+        <span class="brand__name">AdRx</span>
+        <span class="brand__tag">NMC ad compliance check</span>
+      </a>
+    </div>
+  </header>
+
+  <main class="wrap auth">
+    <form id="sign-in-form" class="desk auth__card" novalidate>
+      <h1 class="auth__title">Sign in</h1>
+      <p class="auth__lede">Use the username and password your admin gave you.</p>
+      <div class="field">
+        <label for="username">Username</label>
+        <input id="username" name="username" type="text" autocomplete="username" autocapitalize="none"
+               spellcheck="false" maxlength="64" required>
+      </div>
+      <div class="field">
+        <label for="password">Password</label>
+        <input id="password" name="password" type="password" autocomplete="current-password" maxlength="256" required>
+      </div>
+      <button type="submit" class="btn btn--primary btn--block" id="sign-in-btn">Sign in</button>
+      <p class="form-error" id="form-error" role="alert" hidden></p>
+      <p class="auth__help">Forgot your password? Your admin can set a new one for you.</p>
+    </form>
+  </main>
+
+  <script src="/static/login.js"></script>
+</body>
+</html>

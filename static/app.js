@@ -48,6 +48,12 @@ Appointments: 022-XXXX XXXX`,
   const result = $("#result");
   const state = { mode: "text", file: null, health: null, timer: null };
 
+  // With sign-in on (REQUIRE_LOGIN), each account may use only the checks its admin allowed.
+  const session = window.AdRxSession;
+  const signedIn = session ? session.load() : Promise.resolve(null);
+  const can = (permission) => !session || session.can(permission);
+  const NEED_WORDS = { check_text: "pasted text", check_documents: "documents or images", media: "audio or video" };
+
   /* ---------- input ---------- */
 
   function setMode(mode) {
@@ -98,35 +104,81 @@ Appointments: 022-XXXX XXXX`,
     formError.hidden = true;
   }
 
-  fetch("/api/health?verify_ai=true")
-    .then((r) => r.json())
-    .then((h) => {
-      state.health = h;
-      $("#max-mb").textContent = h.max_upload_mb;
-      if (h.public && h.max_media_minutes) {
-        const minutes = h.max_media_minutes;
-        $("#media-limit").textContent = `; audio and video up to ${minutes} minute${minutes === 1 ? "" : "s"}`;
-      }
-      if (h.speech_service) {
-        $("#privacy-note").textContent += ` Speech in audio and video is turned into text by ${h.speech_service}.`;
-      }
-      if (h.ai_status === "ok") {
-        $("#privacy-note").textContent += " For the AI review the content is also sent to Anthropic's API.";
-      }
-      const note = $("#mode-note");
-      // visitors of the public website never see server set-up details
-      note.classList.toggle("mode-note--warn", h.ai_status === "error" && !h.public);
-      if (h.ai_status === "ok") {
-        note.textContent = `AI review is on (${h.ai_model_name || h.ai_model}): phrase rules plus a full read by Claude, with a ready-to-post rewrite.`;
-      } else if (h.public) {
-        note.textContent = "Quick check: every phrase is compared with the NMC 2026 advertising rules.";
-      } else if (h.ai_status === "error") {
-        note.textContent = `AI review is set up but not working: ${h.ai_message} Until it's fixed, checks use the phrase rules only.`;
-      } else {
-        note.textContent = "Quick check mode: phrase rules only. Add an Anthropic API key on the server for the full AI review and rewrite.";
-      }
-    })
-    .catch(() => {});
+  function showHealth(h) {
+    state.health = h;
+    $("#max-mb").textContent = h.max_upload_mb;
+    if (h.public && h.max_media_minutes && (can("check_audio") || can("check_video"))) {
+      const minutes = h.max_media_minutes;
+      $("#media-limit").textContent = `; audio and video up to ${minutes} minute${minutes === 1 ? "" : "s"}`;
+    }
+    if (h.speech_service) {
+      $("#privacy-note").textContent += ` Speech in audio and video is turned into text by ${h.speech_service}.`;
+    }
+    const aiForMe = h.ai_status === "ok" && can("ai_review");
+    if (aiForMe) {
+      $("#privacy-note").textContent += " For the AI review the content is also sent to Anthropic's API.";
+    }
+    const note = $("#mode-note");
+    // visitors of the public website never see server set-up details
+    note.classList.toggle("mode-note--warn", h.ai_status === "error" && !h.public);
+    if (aiForMe) {
+      note.textContent = `AI review is on (${h.ai_model_name || h.ai_model}): phrase rules plus a full read by Claude, with a ready-to-post rewrite.`;
+    } else if (h.ai_status === "ok") {
+      note.textContent = "Quick check: every phrase is compared with the NMC 2026 advertising rules. AI review isn't part of your account.";
+    } else if (h.public) {
+      note.textContent = "Quick check: every phrase is compared with the NMC 2026 advertising rules.";
+    } else if (h.ai_status === "error") {
+      note.textContent = `AI review is set up but not working: ${h.ai_message} Until it's fixed, checks use the phrase rules only.`;
+    } else {
+      note.textContent = "Quick check mode: phrase rules only. Add an Anthropic API key on the server for the full AI review and rewrite.";
+    }
+  }
+
+  function listText(items) {
+    return items.length < 2 ? items.join("") : `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
+  }
+
+  function applyAccess() {
+    const textOk = can("check_text");
+    const fileKinds = [["check_documents", "documents and images"], ["check_audio", "audio and voice notes"], ["check_video", "videos"]];
+    const allowed = fileKinds.filter(([p]) => can(p)).map(([, words]) => words);
+    $("#text-locked").hidden = textOk;
+    textInput.disabled = !textOk;
+    $$("[data-example]").forEach((b) => { b.disabled = !textOk; });
+    const fileNote = $("#file-locked");
+    if (!allowed.length) {
+      fileNote.textContent = "Your account can't check files. Ask your admin if you need it.";
+      dropzone.hidden = true;
+      $(".caption-field").hidden = true;
+    } else if (allowed.length < fileKinds.length) {
+      fileNote.textContent = `Your account can check ${listText(allowed)}.`;
+    }
+    fileNote.hidden = allowed.length === fileKinds.length;
+    // the hint under "Drop a file here" names only the kinds this account may check
+    const audio = can("check_audio");
+    const video = can("check_video");
+    const kinds = [];
+    if (audio && video) kinds.push("Any audio or video (WhatsApp voice notes, MP3, M4A, AMR, MP4, MOV, MKV, 3GP and more)");
+    else if (audio) kinds.push("Any audio (WhatsApp voice notes, MP3, M4A, AMR and more)");
+    else if (video) kinds.push("Any video (MP4, MOV, MKV, 3GP and more)");
+    if (can("check_documents")) kinds.push("PDF, Word or image");
+    const hintStart = $("#dropzone-hint").firstChild;
+    if (kinds.length && hintStart && hintStart.nodeType === Node.TEXT_NODE) hintStart.data = `${kinds.join(", ")}, up to `;
+    if (!textOk && allowed.length) setMode("file");
+    if (!textOk && !allowed.length) {
+      submitBtn.disabled = true;
+      showError("Your account has no checks switched on yet. Ask your admin for access.");
+    }
+  }
+
+  const health = fetch("/api/health?verify_ai=true").then((r) => r.json()).catch(() => null);
+  Promise.all([signedIn, health]).then(([me, h]) => {
+    if (me && me.login_required) {
+      session.renderMenu($("#account-menu"));
+      applyAccess();
+    }
+    if (h) showHealth(h);
+  });
 
   /* ---------- progress ---------- */
 
@@ -158,6 +210,10 @@ Appointments: 022-XXXX XXXX`,
     let kind = "text";
     if (state.mode === "file") {
       if (!state.file) return showError('Choose a file to check, or switch to "Paste text".');
+      const media = isMedia(state.file);
+      if (media ? !can("check_audio") && !can("check_video") : !can("check_documents")) {
+        return showError(`Your account can't check ${NEED_WORDS[media ? "media" : "check_documents"]}. Ask your admin for access.`);
+      }
       data.append("file", state.file);
       const caption = captionInput.value.trim();
       if (caption) data.append("text", caption);
@@ -176,7 +232,9 @@ Appointments: 022-XXXX XXXX`,
     result.hidden = true;
     startProgress(kind);
     try {
-      const res = await fetch("/api/check", { method: "POST", body: data });
+      const res = session
+        ? await session.api("/api/check", { method: "POST", body: data })
+        : await fetch("/api/check", { method: "POST", body: data });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) {
         const detail = Array.isArray(body.detail) ? body.detail.map((d) => d.msg).join("; ") : body.detail;

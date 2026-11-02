@@ -111,6 +111,7 @@ def _env_lines(path: Path) -> dict[str, str]:
 def test_site_settings_are_safe_for_a_public_website():
     env = _env_lines(DEPLOY / ".env.example")
     assert env["PUBLIC_SITE"] == "true" and env["AI_REVIEW"] == "off"
+    assert env["REQUIRE_LOGIN"] == "on" and env["ADMIN_PASSWORD"] == ""  # setup-server.sh makes a random one
     assert int(env["RATE_LIMIT_PER_HOUR"]) > 0 and int(env["RATE_LIMIT_PER_DAY"]) > 0
     assert int(env["MAX_PARALLEL_CHECKS"]) > 0 and int(env["MAX_UPLOAD_MB"]) <= 200
     assert env["LOG_FILE"] == ""
@@ -124,6 +125,8 @@ def test_compose_file_runs_app_behind_caddy():
     assert "ports" not in app_service  # only Caddy is reachable from outside
     assert app_service["environment"]["FORWARDED_ALLOW_IPS"] == "*"  # real visitor IPs for the limits
     assert app_service["build"]["args"]["PRELOAD_WHISPER"] == "1"
+    assert "accounts:/app/data" in app_service["volumes"] and app_service["environment"]["DATA_DIR"] == "/app/data"
+    assert "accounts" in compose["volumes"]  # accounts survive rebuilds and updates
     assert {"80:80", "443:443"} <= set(caddy["ports"])
     assert "./Caddyfile:/etc/caddy/Caddyfile:ro" in caddy["volumes"]
 
@@ -135,6 +138,7 @@ def test_caddyfile_and_scripts():
     script = (DEPLOY / "setup-server.sh").read_bytes()
     assert b"\r\n" not in script, "shell scripts need LF line endings"
     assert script.startswith(b"#!/usr/bin/env bash") and b"set -euo pipefail" in script
+    assert b"secrets.token_urlsafe" in script and b"chmod 600 .env" in script  # a random admin password, kept private
     assert "deploy/" in (ROOT / ".dockerignore").read_text().split()
 
 
@@ -148,7 +152,7 @@ def _render_env() -> dict:
 
 def test_render_blueprint_fits_the_free_plan():
     env = {key: item.get("value") for key, item in _render_env().items()}
-    assert env["PUBLIC_SITE"] == "true" and env["AI_REVIEW"] == "off"
+    assert env["PUBLIC_SITE"] == "true" and env["AI_REVIEW"] == "off" and env["REQUIRE_LOGIN"] == "on"
     assert env["MAX_PARALLEL_CHECKS"] == "1" and env["OCR_FRAME_WORKERS"] == "1"  # 512 MB of memory
     assert env["TRANSCRIBE_BACKEND"] == "auto" and "groq" in env["OPENAI_BASE_URL"]
     assert env["OPENAI_TRANSCRIBE_MODEL"] == "whisper-large-v3"  # Groq's most accurate model for Hindi
@@ -158,9 +162,10 @@ def test_render_blueprint_fits_the_free_plan():
     assert int(env["MAX_UPLOAD_MB"]) <= 50 and int(env["MAX_MEDIA_SECONDS"]) <= 180
 
 
-def test_render_asks_for_the_speech_key_instead_of_storing_it():
-    key = _render_env()["OPENAI_API_KEY"]
-    assert key == {"key": "OPENAI_API_KEY", "sync": False}
+def test_render_asks_for_secrets_instead_of_storing_them():
+    env = _render_env()
+    for name in ("OPENAI_API_KEY", "ADMIN_PASSWORD", "DATABASE_URL"):
+        assert env[name] == {"key": name, "sync": False}
 
 
 def test_render_settings_are_read(monkeypatch):
@@ -171,6 +176,7 @@ def test_render_settings_are_read(monkeypatch):
     assert (s.ocr_frame_side, s.ocr_frame_workers, s.max_video_frames, s.max_parallel_checks) == (1280, 1, 8, 1)
     assert (s.whisper_cpu_threads, s.whisper_beam_size) == (1, 1)
     assert s.public_site and not s.ai_enabled and s.speech_backend == "local"  # no Groq key: the server's model
+    assert s.require_login and s.admin_username == "admin" and s.keep_awake
     monkeypatch.setenv("OPENAI_API_KEY", "gsk_test")
     assert Settings.from_env().speech_backend == "openai"  # with a Groq key: Groq
 
