@@ -32,7 +32,7 @@ jobs:
           python3 -c '
           import json
           h = json.load(open("health.json"))
-          print("version:", h.get("version"))
+          print("version:", h.get("version"), "commit", h.get("commit") or "(not on Render)")
           print("sign-in required:", h.get("login_required"))
           print("speech-to-text:", h.get("transcription"), h.get("speech_service") or "(on the server)")
           print("keeps itself awake:", h.get("keep_awake"))

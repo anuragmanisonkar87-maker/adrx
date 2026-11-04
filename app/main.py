@@ -273,6 +273,7 @@ def health(verify_ai: bool = False) -> dict:
     body = {
         "ok": True,
         "version": __version__,
+        "commit": os.getenv("RENDER_GIT_COMMIT", "")[:7] or None,  # which commit Render is running
         "ai_enabled": s.ai_enabled,
         "ai_model": s.claude_model if s.ai_enabled else None,
         "transcription": s.speech_backend,

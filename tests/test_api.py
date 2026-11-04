@@ -16,6 +16,13 @@ def test_health():
     assert r.json()["ai_enabled"] is False
 
 
+def test_health_names_the_running_commit(monkeypatch):
+    monkeypatch.delenv("RENDER_GIT_COMMIT", raising=False)
+    assert client.get("/api/health").json()["commit"] is None
+    monkeypatch.setenv("RENDER_GIT_COMMIT", "170c6f8a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e")  # set by Render
+    assert client.get("/api/health").json()["commit"] == "170c6f8"
+
+
 def test_index_served():
     r = client.get("/")
     assert r.status_code == 200 and "Check an ad before you post it." in r.text
