@@ -73,6 +73,18 @@ Appointments: 022-XXXX XXXX`,
     return bytes > 1048576 ? `${(bytes / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`;
   }
 
+  // The largest file the server takes, in bytes (null until the server has said)
+  function maxUploadBytes() {
+    const mb = state.health && state.health.max_upload_mb;
+    return mb ? mb * 1048576 : null;
+  }
+  function tooBigText(file) {
+    const limit = maxUploadBytes();
+    return limit && file.size > limit
+      ? `This file is ${formatSize(file.size)}. The largest file you can check is ${state.health.max_upload_mb} MB.`
+      : null;
+  }
+
   function pickFile(file) {
     if (!file) return;
     state.file = file;
@@ -80,7 +92,9 @@ Appointments: 022-XXXX XXXX`,
     $("#dropzone-main").textContent = file.name;
     $("#dropzone-hint").textContent = `${formatSize(file.size)}. Click to choose a different file.`;
     languageField.hidden = !isMedia(file);
-    hideError();
+    const tooBig = tooBigText(file);
+    if (tooBig) showError(tooBig); // say so now, not after a long upload
+    else hideError();
   }
   fileInput.addEventListener("change", () => pickFile(fileInput.files[0]));
   ["dragenter", "dragover"].forEach((type) =>
@@ -182,19 +196,49 @@ Appointments: 022-XXXX XXXX`,
 
   /* ---------- progress ---------- */
 
-  function startProgress(kind) {
+  // Shows what is happening while a check runs. For a file, "Uploading..." counts up as the file is sent (big files
+  // take a while on a slow connection) and the checking steps start once the server has it all.
+  // tracksUpload: the request reports how much of the file has been sent (see AdRxSession.api).
+  function startProgress(kind, tracksUpload) {
     const steps = {
       media: ["Uploading...", "Pulling out the audio...", "Transcribing the speech...", "Reading text shown on screen...", "Checking against the NMC guidelines..."],
       doc: ["Uploading...", "Reading the text...", "Checking against the NMC guidelines..."],
       text: ["Checking against the NMC guidelines..."],
     }[kind];
     let i = 0;
+    let lastShown = 0;
+    const run = () => {
+      clearInterval(state.timer);
+      state.timer = setInterval(() => {
+        if (i < steps.length - 1) progressText.textContent = steps[++i];
+      }, 4500);
+    };
     progressText.textContent = steps[0];
     progress.hidden = false;
     clearInterval(state.timer);
-    state.timer = setInterval(() => {
-      if (i < steps.length - 1) progressText.textContent = steps[++i];
-    }, 4500);
+    const tracker = {
+      sending: Boolean(tracksUpload) && steps.length > 1,
+      started: false, // some of the file has gone out
+      uploading(sent, total) {
+        if (!tracker.sending || !total) return;
+        if (sent > 0) tracker.started = true;
+        if (sent >= total) return tracker.sent();
+        const now = Date.now();
+        if (now - lastShown < 1000) return; // a new figure every second is enough (and quieter for screen readers)
+        lastShown = now;
+        const size = formatSize(state.file ? state.file.size : total);
+        progressText.textContent = `Uploading... ${Math.floor((sent / total) * 100)}% of ${size}`;
+      },
+      sent() {
+        if (!tracker.sending) return;
+        tracker.sending = false;
+        i = 1;
+        progressText.textContent = steps[1];
+        run();
+      },
+    };
+    if (!tracker.sending) run();
+    return tracker;
   }
   function stopProgress() {
     clearInterval(state.timer);
@@ -210,6 +254,8 @@ Appointments: 022-XXXX XXXX`,
     let kind = "text";
     if (state.mode === "file") {
       if (!state.file) return showError('Choose a file to check, or switch to "Paste text".');
+      const tooBig = tooBigText(state.file);
+      if (tooBig) return showError(tooBig);
       const media = isMedia(state.file);
       if (media ? !can("check_audio") && !can("check_video") : !can("check_documents")) {
         return showError(`Your account can't check ${NEED_WORDS[media ? "media" : "check_documents"]}. Ask your admin for access.`);
@@ -230,11 +276,19 @@ Appointments: 022-XXXX XXXX`,
 
     submitBtn.disabled = true;
     result.hidden = true;
-    startProgress(kind);
+    const sendsFile = kind !== "text" && Boolean(session);
+    const tracker = startProgress(kind, sendsFile);
+    const options = { method: "POST", body: data };
+    if (sendsFile) Object.assign(options, { onUpload: tracker.uploading, onSent: tracker.sent });
     try {
-      const res = session
-        ? await session.api("/api/check", { method: "POST", body: data })
-        : await fetch("/api/check", { method: "POST", body: data });
+      let res;
+      try {
+        res = session ? await session.api("/api/check", options) : await fetch("/api/check", options);
+      } catch (err) { // the connection itself failed
+        if (sendsFile && !tracker.sending) throw new Error("The connection to the server was lost while your file was being checked. Please try again in a minute.");
+        if (sendsFile && tracker.started) throw new Error("The upload stopped before the whole file was sent. Check your connection and try again.");
+        throw new Error("Could not reach the server. Check your connection and try again.");
+      }
       const body = await res.json().catch(() => ({}));
       if (!res.ok) {
         const detail = Array.isArray(body.detail) ? body.detail.map((d) => d.msg).join("; ") : body.detail;
@@ -242,7 +296,7 @@ Appointments: 022-XXXX XXXX`,
       }
       renderResult(body);
     } catch (err) {
-      showError(err.message === "Failed to fetch" ? "Could not reach the server. Check your connection and try again." : err.message);
+      showError(err.message);
     } finally {
       stopProgress();
       submitBtn.disabled = false;

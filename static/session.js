@@ -28,11 +28,68 @@
     return me;
   }
 
+  // Takes the browser's current sign-in (it may have changed since this page was opened, for example after signing
+  // in again in another tab). Signed out: off to the sign-in page; a different account: the page reloads.
+  // Returns false when the server could not say.
+  async function refresh() {
+    const previousUser = me && me.user && me.user.id;
+    const fresh = await fetch("/api/auth/me", { headers: { Accept: "application/json" }, credentials: "same-origin" });
+    if (fresh.status === 401) return toSignIn();
+    if (!fresh.ok) return false;
+    me = await fresh.json();
+    if (!me.user || me.user.id !== previousUser) {
+      location.reload();
+      return never();
+    }
+    if (me.user.must_change_password && location.pathname !== "/account") {
+      location.assign("/account");
+      return never();
+    }
+    return true;
+  }
+
+  // fetch() can't report how much of a file has been sent, so uploads go through XMLHttpRequest:
+  // options.onUpload(sentBytes, totalBytes) while sending, options.onSent() once everything is sent.
+  // Resolves with a Response like fetch(); a broken connection rejects with a TypeError, as fetch() does.
+  function send(url, options, headers) {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      const failed = () => reject(new TypeError("Failed to fetch"));
+      xhr.open(options.method || "GET", url);
+      headers.forEach((value, name) => xhr.setRequestHeader(name, value));
+      if (options.onUpload) {
+        xhr.upload.addEventListener("progress", (e) => options.onUpload(e.loaded, e.lengthComputable ? e.total : 0));
+      }
+      if (options.onSent) xhr.upload.addEventListener("load", () => options.onSent());
+      xhr.addEventListener("load", () => {
+        try {
+          const responseHeaders = new Headers();
+          xhr.getAllResponseHeaders().trim().split(/[\r\n]+/).forEach((line) => {
+            const colon = line.indexOf(":");
+            if (colon > 0) responseHeaders.append(line.slice(0, colon).trim(), line.slice(colon + 1).trim());
+          });
+          const body = [204, 205, 304].includes(xhr.status) ? null : xhr.responseText;
+          resolve(new Response(body, { status: xhr.status, statusText: xhr.statusText, headers: responseHeaders }));
+        } catch (err) {
+          failed();
+        }
+      });
+      ["error", "abort", "timeout"].forEach((type) => xhr.addEventListener(type, failed));
+      xhr.send(options.body === undefined ? null : options.body);
+    });
+  }
+
   async function api(url, options = {}, retried = false) {
+    const upload = Boolean(options.onUpload || options.onSent);
+    // Before sending a file, make sure the sign-in still works and the security token is current,
+    // so a big file isn't uploaded only to be refused at the end.
+    if (upload && me && me.login_required && !retried) await refresh();
     const headers = new Headers(options.headers || {});
     if (me && me.csrf_token) headers.set("X-CSRF-Token", me.csrf_token);
     if (!headers.has("Accept")) headers.set("Accept", "application/json");
-    const res = await fetch(url, { ...options, headers, credentials: "same-origin" });
+    const res = upload
+      ? await send(url, options, headers)
+      : await fetch(url, { ...options, headers, credentials: "same-origin" });
     if (me && me.login_required) {
       if (res.status === 401) return toSignIn();
       if (res.status === 403) {
@@ -41,21 +98,8 @@
           location.assign("/account");
           return never();
         }
-        if (body.code === "csrf" && !retried) {
-          // This page was opened under an earlier sign-in (for example, someone signed in again in another tab).
-          // Take the browser's current session and try once more; a different account reloads the page instead.
-          const previousUser = me.user && me.user.id;
-          const fresh = await fetch("/api/auth/me", { headers: { Accept: "application/json" }, credentials: "same-origin" });
-          if (fresh.status === 401) return toSignIn();
-          if (fresh.ok) {
-            me = await fresh.json();
-            if (!me.user || me.user.id !== previousUser) {
-              location.reload();
-              return never();
-            }
-            return api(url, options, true);
-          }
-        }
+        // This page was opened under an earlier sign-in: take the current one and try once more.
+        if (body.code === "csrf" && !retried && await refresh()) return api(url, options, true);
       }
     }
     return res;

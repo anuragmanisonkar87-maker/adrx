@@ -73,6 +73,7 @@ class Settings:
     ocr_languages: str  # tesseract language codes, e.g. "eng+hin"
     ocr_frame_side: int  # video frames are enlarged to this long side before OCR (smaller = faster)
     ocr_frame_workers: int  # Tesseract processes per video frame at once (1 = least memory)
+    ffmpeg_threads: int  # threads ffmpeg decodes a video with; 0 = its default (one per CPU; more memory)
 
     # Limits
     max_upload_mb: int
@@ -142,6 +143,7 @@ class Settings:
             ocr_languages=os.getenv("OCR_LANGUAGES", "eng+hin"),
             ocr_frame_side=max(_int("OCR_FRAME_SIDE", 1600), 640),
             ocr_frame_workers=max(_int("OCR_FRAME_WORKERS", 4), 1),
+            ffmpeg_threads=max(_int("FFMPEG_THREADS", 0), 0),
             max_upload_mb=_int("MAX_UPLOAD_MB", 500),
             max_media_seconds=_int("MAX_MEDIA_SECONDS", 600),
             max_pdf_pages=_int("MAX_PDF_PAGES", 30),

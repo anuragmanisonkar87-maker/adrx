@@ -154,12 +154,13 @@ def test_render_blueprint_fits_the_free_plan():
     env = {key: item.get("value") for key, item in _render_env().items()}
     assert env["PUBLIC_SITE"] == "true" and env["AI_REVIEW"] == "off" and env["REQUIRE_LOGIN"] == "on"
     assert env["MAX_PARALLEL_CHECKS"] == "1" and env["OCR_FRAME_WORKERS"] == "1"  # 512 MB of memory
+    assert env["FFMPEG_THREADS"] == "1" and env["OMP_THREAD_LIMIT"] == "1"  # one decoder thread: 4K fits too
     assert env["TRANSCRIBE_BACKEND"] == "auto" and "groq" in env["OPENAI_BASE_URL"]
     assert env["OPENAI_TRANSCRIBE_MODEL"] == "whisper-large-v3"  # Groq's most accurate model for Hindi
     assert env["KEEP_AWAKE"] == "on"  # Render sets RENDER_EXTERNAL_URL, the address the app visits
     assert env["WHISPER_MODEL"] in ("tiny", "base") and env["PRELOAD_WHISPER"] == "1"  # fits 512 MB, baked in
     assert env["WHISPER_CPU_THREADS"] == "1" and env["WHISPER_BEAM_SIZE"] == "1"  # a tenth of a CPU
-    assert int(env["MAX_UPLOAD_MB"]) <= 500 and int(env["MAX_MEDIA_SECONDS"]) <= 180  # /tmp is 2 GB on Render
+    assert int(env["MAX_UPLOAD_MB"]) == 250 and int(env["MAX_MEDIA_SECONDS"]) <= 180  # /tmp is 2 GB on Render
 
 
 def test_render_asks_for_secrets_instead_of_storing_them():

@@ -255,6 +255,7 @@ Cloud Run or a VM.
 | `OPENAI_API_KEY`, `OPENAI_BASE_URL`, `OPENAI_TRANSCRIBE_MODEL` | - | For `TRANSCRIBE_BACKEND=openai`. |
 | `OCR_LANGUAGES` | `eng+hin` | Tesseract languages. |
 | `OCR_FRAME_SIDE` / `OCR_FRAME_WORKERS` / `MAX_VIDEO_FRAMES` | 1600 / 4 / 24 | Video frame reading: size, Tesseract processes at once, frames per video. Lower = faster and less memory. |
+| `FFMPEG_THREADS` | 0 (one per CPU) | Threads ffmpeg decodes videos with. `1` on a small server: each thread holds its own frames (100+ MB for a 4K video). |
 | `MAX_UPLOAD_MB` / `MAX_MEDIA_SECONDS` / `MAX_PDF_PAGES` | 500 / 600 / 30 | Input limits. |
 | `BASIC_AUTH_USER`, `BASIC_AUTH_PASSWORD` | - | One shared password for the whole site (a quick demo; accounts are better). |
 | `REQUIRE_LOGIN` | `off` | `on`: every page and check needs an account (see Sign-in and user accounts). |

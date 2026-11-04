@@ -26,7 +26,7 @@ services:
       - key: QUEUE_WAIT_SECONDS
         value: "240"
       - key: MAX_UPLOAD_MB  # an upload passes through /tmp (2 GB on Render) and is deleted after the check
-        value: "500"
+        value: "250"
       - key: MAX_MEDIA_SECONDS
         value: "120"
       - key: MAX_PDF_PAGES
@@ -36,6 +36,12 @@ services:
       - key: OCR_FRAME_SIDE
         value: "1280"
       - key: OCR_FRAME_WORKERS
+        value: "1"
+      # One thread each for ffmpeg and Tesseract: the server has a tenth of a CPU, so more threads only add memory
+      # (ffmpeg starts one decoder per CPU of the machine it runs on: 300+ MB for a 4K video on 8 CPUs).
+      - key: FFMPEG_THREADS
+        value: "1"
+      - key: OMP_THREAD_LIMIT
         value: "1"
       # The app opens its own address (Render sets RENDER_EXTERNAL_URL) every 10 minutes, so the site never
       # falls asleep. Awake all month, it uses about 744 of the 750 free hours a Render workspace gets, so
